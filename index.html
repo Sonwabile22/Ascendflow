@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AscendFlow OS — CRM &amp; Business Operating System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: { colors: {
+      ascendBlue:{DEFAULT:'#0A66FF',dark:'#0052D6',light:'#E6F0FF'},
+      ascendGreen:{DEFAULT:'#34C759',dark:'#28A745',light:'#EAF8EC'},
+      ascendOrange:{DEFAULT:'#FF9F0A'}, ascendRed:{DEFAULT:'#FF3B30'}
+    }, fontFamily:{ sans:['"Plus Jakarta Sans"','sans-serif'], heading:['Outfit','sans-serif'] } } }
+  }
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+:root{
+  --bg-primary:#F8FAFC; --bg-secondary:#FFFFFF; --bg-sidebar:#0F172A; --bg-sidebar-hover:#1E293B;
+  --text-main:#0F172A; --text-muted:#64748B; --border-light:#E2E8F0;
+  --shadow-premium:0 4px 20px -2px rgba(10,102,255,.05),0 2px 8px -1px rgba(0,0,0,.02);
+  --shadow-hover:0 12px 30px -4px rgba(10,102,255,.12),0 4px 12px -2px rgba(0,0,0,.04);
+  --card-radius:16px;
+}
+body.dark-mode{ --bg-primary:#0B0F19; --bg-secondary:#131C2E; --text-main:#F8FAFC; --text-muted:#94A3B8; --border-light:#1E293B; }
+body{ font-family:'Plus Jakarta Sans',sans-serif; background-color:var(--bg-primary); color:var(--text-main); transition:background-color .3s,color .3s; }
+h1,h2,h3,h4,h5,h6,.font-heading{ font-family:'Outfit',sans-serif; }
+::-webkit-scrollbar{width:6px;height:6px} ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+body.dark-mode ::-webkit-scrollbar-thumb{background:#334155}
+.sidebar{ background-color:var(--bg-sidebar); }
+.sidebar-nav-item{ transition:all .2s cubic-bezier(.4,0,.2,1); color:#CBD5E1; }
+.sidebar-nav-item:hover{ background-color:var(--bg-sidebar-hover); color:#fff; }
+.sidebar-nav-item.active{ background-color:#0A66FF; color:#fff; font-weight:500; box-shadow:0 4px 14px 0 rgba(10,102,255,.4); }
+.premium-card{ background-color:var(--bg-secondary); border:1px solid var(--border-light); border-radius:var(--card-radius); box-shadow:var(--shadow-premium); }
+.modal-overlay{ background-color:rgba(15,23,42,.4); backdrop-filter:blur(6px); }
+.view-fade-in{ animation:fadeIn .3s cubic-bezier(.4,0,.2,1); }
+@keyframes fadeIn{ from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.pulse-green{ box-shadow:0 0 0 0 rgba(52,199,89,.7); animation:pulse-g 2s infinite; }
+@keyframes pulse-g{ 0%{transform:scale(.95);box-shadow:0 0 0 0 rgba(52,199,89,.7)} 70%{transform:scale(1);box-shadow:0 0 0 6px rgba(52,199,89,0)} 100%{transform:scale(.95);box-shadow:0 0 0 0 rgba(52,199,89,0)} }
+.role-badge{ font-size:9px; font-weight:800; letter-spacing:.06em; padding:2px 8px; border-radius:999px; text-transform:uppercase; }
+.badge-CEO{ background:#EDE9FE; color:#6D28D9; } body.dark-mode .badge-CEO{ background:#2E1065; color:#C4B5FD; }
+.badge-ADMIN{ background:#E6F0FF; color:#0A66FF; } body.dark-mode .badge-ADMIN{ background:#0B2A5E; color:#93C5FD; }
+.badge-STAFF{ background:#EAF8EC; color:#28A745; } body.dark-mode .badge-STAFF{ background:#0A3D1F; color:#86EFAC; }
+.badge-CLIENT{ background:#FFF4E5; color:#B45309; } body.dark-mode .badge-CLIENT{ background:#4A2C05; color:#FCD34D; }
+.kanban-col{ min-height:420px; }
+.lead-card[draggable=true]{ cursor:grab; }
+.lead-card.dragging{ opacity:.4; }
+.input-field{ width:100%; padding:.5rem .75rem; border:1px solid var(--border-light); border-radius:.75rem; background:var(--bg-primary); color:var(--text-main); font-size:.875rem; }
+.input-field:focus{ outline:none; box-shadow:0 0 0 2px rgba(10,102,255,.4); }
+.btn-primary{ background:#0A66FF; color:#fff; font-weight:700; text-transform:uppercase; font-size:.7rem; letter-spacing:.03em; padding:.6rem 1.1rem; border-radius:.75rem; transition:.15s; }
+.btn-primary:hover{ background:#0052D6; }
+.btn-primary:disabled{ opacity:.6; cursor:not-allowed; }
+.btn-ghost{ border:1px solid var(--border-light); font-weight:700; text-transform:uppercase; font-size:.7rem; padding:.6rem 1rem; border-radius:.75rem; }
+.btn-ghost:hover{ background:var(--bg-primary); }
+.btn-danger{ color:#FF3B30; font-weight:700; text-transform:uppercase; font-size:.65rem; }
+#toast-stack{ position:fixed; top:1rem; right:1rem; z-index:100; display:flex; flex-direction:column; gap:.5rem; }
+.toast{ background:var(--bg-secondary); border:1px solid var(--border-light); box-shadow:var(--shadow-hover); border-radius:.75rem; padding:.75rem 1rem; font-size:.8rem; font-weight:600; min-width:240px; animation:fadeIn .25s; }
+.toast.err{ border-color:#FF3B30; color:#FF3B30; }
+.toast.ok{ border-color:#34C759; color:#28A745; }
+.progress-track{ background:var(--border-light); border-radius:999px; height:6px; overflow:hidden; }
+.progress-fill{ background:#0A66FF; height:100%; border-radius:999px; }
+</style>
+</head>
+<body class="transition-colors duration-300">
+
+<div id="toast-stack"></div>
+
+<!-- ============================= AUTH SCREEN ============================= -->
+<div id="auth-screen" class="min-h-screen flex items-center justify-center p-4" style="background:radial-gradient(circle at 20% 20%, rgba(10,102,255,.08), transparent 40%), var(--bg-primary);">
+  <div class="w-full max-w-md">
+    <div class="flex items-center gap-3 justify-center mb-8">
+      <div class="w-11 h-11 rounded-xl bg-ascendBlue flex items-center justify-center font-heading font-extrabold text-white text-lg shadow-lg shadow-blue-500/20">AF</div>
+      <div>
+        <h1 class="font-heading font-extrabold text-xl leading-none">AscendFlow OS</h1>
+        <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Growth Control System</span>
+      </div>
+    </div>
+
+    <div class="premium-card p-7">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="font-heading font-bold text-lg">Sign in</h2>
+        <span id="conn-badge" class="text-[9px] font-bold uppercase px-2.5 py-1 rounded-full"></span>
+      </div>
+
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email</label>
+          <input type="email" id="login-email" required class="input-field" placeholder="you@ascendflow.com">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Password</label>
+          <input type="password" id="login-password" required class="input-field" placeholder="••••••••">
+        </div>
+        <p id="login-error" class="text-xs font-semibold text-ascendRed hidden"></p>
+        <button type="submit" class="btn-primary w-full py-3">Sign In</button>
+      </form>
+
+      <p class="text-[11px] text-slate-400 mt-4 leading-relaxed">New accounts are created by an Administrator inside <span class="font-bold">Team &amp; Access</span> — there's no public sign-up. Ask your admin for an invite.</p>
+
+      <button id="toggle-conn-panel" type="button" class="text-[11px] font-bold text-ascendBlue mt-5 flex items-center gap-1">
+        <i data-lucide="database" class="w-3.5 h-3.5"></i> Supabase connection settings
+      </button>
+
+      <div id="conn-panel" class="hidden mt-4 pt-4 border-t space-y-3" style="border-color:var(--border-light);">
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Supabase Project URL</label>
+          <input type="text" id="conn-url" class="input-field" placeholder="https://your-project.supabase.co">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Supabase Anon Key</label>
+          <input type="password" id="conn-key" class="input-field" placeholder="eyJhbGciOi...">
+        </div>
+        <div class="flex gap-2">
+          <button id="conn-save" type="button" class="btn-primary flex-1 py-2.5">Connect &amp; Reload</button>
+          <button id="conn-clear" type="button" class="btn-ghost">Use Local Demo</button>
+        </div>
+        <p class="text-[10.5px] text-slate-400 leading-relaxed">This app already ships pre-connected to the AscendFlow Supabase project. Only change this if you're pointing it at a different project.</p>
+      </div>
+    </div>
+
+    <div id="demo-creds" class="premium-card p-5 mt-4 text-xs">
+      <h3 class="font-heading font-bold text-[11px] uppercase tracking-wider text-slate-400 mb-2.5">Local Demo Mode — Try Any Role</h3>
+      <div class="grid grid-cols-2 gap-2 font-semibold">
+        <button class="demo-login-btn text-left px-3 py-2 rounded-lg bg-[color:var(--bg-primary)] border" style="border-color:var(--border-light)" data-email="ceo@ascendflow.com" data-pass="Ceo12345!">
+          <span class="role-badge badge-CEO">CEO</span><br><span class="text-[10px] text-slate-400">ceo@ascendflow.com</span>
+        </button>
+        <button class="demo-login-btn text-left px-3 py-2 rounded-lg bg-[color:var(--bg-primary)] border" style="border-color:var(--border-light)" data-email="admin@ascendflow.com" data-pass="Admin12345!">
+          <span class="role-badge badge-ADMIN">ADMIN</span><br><span class="text-[10px] text-slate-400">admin@ascendflow.com</span>
+        </button>
+        <button class="demo-login-btn text-left px-3 py-2 rounded-lg bg-[color:var(--bg-primary)] border" style="border-color:var(--border-light)" data-email="staff@ascendflow.com" data-pass="Staff12345!">
+          <span class="role-badge badge-STAFF">STAFF</span><br><span class="text-[10px] text-slate-400">staff@ascendflow.com</span>
+        </button>
+        <button class="demo-login-btn text-left px-3 py-2 rounded-lg bg-[color:var(--bg-primary)] border" style="border-color:var(--border-light)" data-email="gvance@apexhealth.com" data-pass="Client12345!">
+          <span class="role-badge badge-CLIENT">CLIENT</span><br><span class="text-[10px] text-slate-400">gvance@apexhealth.com</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= APP SHELL ============================= -->
+<div id="app-shell" class="hidden flex h-screen overflow-hidden">
+  <aside class="sidebar w-64 flex-shrink-0 flex flex-col h-full border-r border-slate-800 z-30">
+    <div class="px-6 py-5 flex items-center gap-3 border-b border-slate-800" style="background:#0A0F1D">
+      <div class="w-9 h-9 rounded-xl bg-ascendBlue flex items-center justify-center font-heading font-extrabold text-white text-lg">AF</div>
+      <div>
+        <h1 class="text-white font-heading font-bold text-base leading-none">AscendFlow</h1>
+        <span class="text-[10px] text-slate-500 font-bold tracking-widest uppercase">OS Platform</span>
+      </div>
+    </div>
+
+    <div class="px-4 py-3 mx-3 my-4 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center gap-3">
+      <div class="relative">
+        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center font-heading text-white border border-slate-700 uppercase" id="sidebar-avatar">--</div>
+        <span class="absolute bottom-[-2px] right-[-2px] w-3.5 h-3.5 bg-ascendGreen rounded-full border-2 border-slate-900 pulse-green"></span>
+      </div>
+      <div class="overflow-hidden">
+        <h3 class="text-xs text-white font-semibold truncate leading-snug" id="sidebar-user-name">—</h3>
+        <span class="role-badge" id="sidebar-user-role">—</span>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 space-y-1 overflow-y-auto pb-4" id="sidebar-nav"></nav>
+
+    <div class="px-3 pb-4">
+      <button id="logout-btn" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left">
+        <i data-lucide="log-out" class="w-4 h-4"></i><span>Sign Out</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="flex-1 flex flex-col min-w-0">
+    <header class="h-16 flex items-center justify-between px-6 border-b flex-shrink-0" style="border-color:var(--border-light); background:var(--bg-secondary)">
+      <div>
+        <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">AscendFlow OS</span>
+        <h2 id="header-breadcrumb" class="font-heading font-bold text-base leading-tight">Dashboard</h2>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="mode-pill" class="text-[9px] font-bold uppercase px-2.5 py-1 rounded-full"></span>
+        <button id="theme-toggle-btn" class="w-9 h-9 rounded-lg flex items-center justify-center border" style="border-color:var(--border-light)">
+          <i data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </header>
+
+    <main id="view-root" class="flex-1 overflow-y-auto p-6"></main>
+  </div>
+</div>
+
+<!-- ============================= GENERIC MODAL ============================= -->
+<div id="modal" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-[color:var(--bg-secondary)] w-full max-w-lg rounded-2xl shadow-2xl p-6 max-h-[88vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b pb-4 mb-4" style="border-color:var(--border-light)">
+      <h2 id="modal-title" class="font-heading font-bold text-lg">Title</h2>
+      <button id="modal-close" class="p-1.5 rounded-lg border" style="border-color:var(--border-light)"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+/* ============================================================================
+   CONFIG — this app ships pre-connected to the AscendFlow Supabase project.
+   The anon key is safe to ship in client-side code; every table is locked
+   down with Row Level Security (see supabase-schema.sql / migration-2.sql).
+============================================================================ */
+const DEFAULT_SUPABASE_URL = 'https://ihcnmsospqvfwxmipsiy.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloY25tc29zcHF2Znd4bWlwc2l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MDg3NjAsImV4cCI6MjA5ODM4NDc2MH0.EJBsPIEfBkdHQqgwbPt5Op0KcQt2RHCeDEry7U2KPwA';
+
+/* ============================================================================
+   STATE
+============================================================================ */
+let supabase = null;
+let usingSupabase = false;
+let currentUser = null; // {id,email,full_name,role,client_id}
+
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const fmtMoney = (n) => 'R' + Number(n||0).toLocaleString('en-ZA');
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Math.random().toString(36).slice(2));
+
+function toast(msg, type='ok'){
+  const stack = $('#toast-stack');
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type==='err'?'err':'ok');
+  el.textContent = msg;
+  stack.appendChild(el);
+  setTimeout(()=>el.remove(), 3600);
+}
+
+/* ============================================================================
+   SUPABASE INIT
+============================================================================ */
+async function initSupabase(){
+  if (localStorage.getItem('AF_FORCE_LOCAL') === '1') return;
+  const cfg = JSON.parse(localStorage.getItem('AF_SUPABASE_CONFIG') || 'null');
+  const url = cfg?.url || DEFAULT_SUPABASE_URL;
+  const key = cfg?.key || DEFAULT_SUPABASE_KEY;
+  if (url && key && !url.includes('your-project')) {
+    try {
+      supabase = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } });
+      usingSupabase = true;
+    } catch(e) { console.error('Supabase init failed', e); usingSupabase = false; }
+  }
+}
+
+/* ============================================================================
+   LOCAL DEMO DATABASE (fallback when Supabase isn't configured)
+============================================================================ */
+function seedLocalDB(){
+  return {
+    profiles: [
+      { id:'u-ceo', email:'ceo@ascendflow.com', password:'Ceo12345!', full_name:'Alex Rivera', role:'CEO', client_id:null, created_at:'2026-01-05T00:00:00Z' },
+      { id:'u-admin', email:'admin@ascendflow.com', password:'Admin12345!', full_name:'Priya Anand', role:'ADMIN', client_id:null, created_at:'2026-01-05T00:00:00Z' },
+      { id:'u-staff', email:'staff@ascendflow.com', password:'Staff12345!', full_name:'Jordan Sparks', role:'STAFF', client_id:null, created_at:'2026-01-06T00:00:00Z' },
+      { id:'u-client', email:'gvance@apexhealth.com', password:'Client12345!', full_name:'Dr. Gregory Vance', role:'CLIENT', client_id:'c-alpha', created_at:'2026-01-10T00:00:00Z' }
+    ],
+    clients: [
+      { id:'c-alpha', name:'Apex Health Systems', industry:'Healthcare Tech', logo:'🏥', website:'https://apexhealthsystems.com', contact_name:'Dr. Gregory Vance', phone:'+1 (555) 349-2394', email:'gvance@apexhealth.com', revenue:4500000, goal:6000000, employees:120, tags:'Enterprise, Active, Healthcare', notes:'Migrating client portal to React; boosting automation conversion.', status:'ACTIVE', contract_value:180000, renewal_date:'2027-01-15', maturity_score:74, created_at:'2025-11-01T00:00:00Z' },
+      { id:'c-beta', name:'Velo Logistics', industry:'Supply Chain & Freight', logo:'🚚', website:'https://velologistics.io', contact_name:'Sophia Martinez', phone:'+1 (555) 902-1845', email:'smartinez@velologistics.io', revenue:12000000, goal:15000000, employees:450, tags:'Logistics, Automated', notes:'Deploying dispatch tools and carrier email automation.', status:'ACTIVE', contract_value:240000, renewal_date:'2026-11-22', maturity_score:62, created_at:'2025-10-15T00:00:00Z' },
+      { id:'c-gamma', name:'Pulse Fitness', industry:'Gym Franchise & Wellness', logo:'⚡', website:'https://pulsewellness.com', contact_name:'Brett Harper', phone:'+1 (555) 124-7890', email:'bharper@pulsewellness.com', revenue:1800000, goal:2500000, employees:60, tags:'Media Engine, B2C', notes:'Short-form video strategy and mobile membership app.', status:'ONBOARDING', contract_value:95000, renewal_date:'2026-08-30', maturity_score:48, created_at:'2026-02-20T00:00:00Z' }
+    ],
+    leads: [
+      { id:'l-1', company:'Nimbus Retail Group', contact_name:'Kara Lin', email:'kara@nimbusretail.com', phone:'+1 (555) 210-4477', status:'Proposal', value:120000, probability:65, source:'Referral', created_by:'u-staff', created_at:'2026-06-01T00:00:00Z' },
+      { id:'l-2', company:'Brightline Dental Group', contact_name:'Dr. Omar Reyes', email:'oreyes@brightlinedental.com', phone:'+1 (555) 664-9021', status:'Discovery', value:60000, probability:30, source:'LinkedIn', created_by:'u-staff', created_at:'2026-06-10T00:00:00Z' },
+      { id:'l-3', company:'Fjord Outdoor Co.', contact_name:'Ingrid Solberg', email:'ingrid@fjordoutdoor.com', phone:'+1 (555) 337-8820', status:'Negotiation', value:210000, probability:80, source:'Cold Outbound', created_by:'u-staff', created_at:'2026-05-22T00:00:00Z' },
+      { id:'l-4', company:'Cascade Legal Partners', contact_name:'Marcus Webb', email:'mwebb@cascadelegal.com', phone:'+1 (555) 774-1290', status:'Won', value:95000, probability:100, source:'Referral', created_by:'u-staff', created_at:'2026-04-14T00:00:00Z' },
+      { id:'l-5', company:'Solace Home Care', contact_name:'Denise Faro', email:'dfaro@solacehomecare.com', phone:'+1 (555) 552-6633', status:'Audit', value:45000, probability:45, source:'Google Ads', created_by:'u-staff', created_at:'2026-06-18T00:00:00Z' },
+      { id:'l-6', company:'Ridgeview Realty', contact_name:'Tom Ashford', email:'tashford@ridgeviewrealty.com', phone:'+1 (555) 908-3345', status:'Lost', value:30000, probability:0, source:'Referral', created_by:'u-staff', created_at:'2026-03-02T00:00:00Z' }
+    ],
+    projects: [
+      { id:'p-1', client_id:'c-alpha', name:'HIPAA-Ready Client Portal Rebuild', description:'React rebuild of the patient/staff portal with SOC2-aligned data handling.', division:'Ascend Software', status:'ACTIVE', progress:68, budget:120000, deadline:'2026-09-01', created_at:'2026-02-01T00:00:00Z' },
+      { id:'p-2', client_id:'c-beta', name:'Dispatch Automation Suite', description:'Carrier webhook listeners and automated routing rules.', division:'Ascend Systems', status:'ACTIVE', progress:42, budget:95000, deadline:'2026-10-15', created_at:'2026-03-10T00:00:00Z' },
+      { id:'p-3', client_id:'c-gamma', name:'Membership Mobile App', description:'Booking, leaderboard, and check-in flows for gym members.', division:'Ascend Software', status:'ACTIVE', progress:25, budget:80000, deadline:'2026-12-01', created_at:'2026-05-01T00:00:00Z' },
+      { id:'p-4', client_id:'c-alpha', name:'Internal QA Dashboard', description:'Internal tool tracking customer logs and portal bugs.', division:'Ascend Software', status:'COMPLETED', progress:100, budget:25000, deadline:'2026-05-30', created_at:'2026-01-20T00:00:00Z' }
+    ],
+    tasks: [
+      { id:'t-1', project_id:'p-1', client_id:'c-alpha', title:'HIPAA verification protocols in API endpoints', description:'Encrypt attributes to conform to SOC2/HIPAA policies.', status:'IN_PROGRESS', priority:'Urgent', due_date:'2026-07-05', assigned_to:'u-admin', created_at:'2026-06-01T00:00:00Z' },
+      { id:'t-2', project_id:'p-1', client_id:'c-alpha', title:'Figma mockups review for billing cards', description:'Confirm layout changes with Dr. Gregory Vance.', status:'REVIEW', priority:'Medium', due_date:'2026-07-02', assigned_to:'u-admin', created_at:'2026-06-05T00:00:00Z' },
+      { id:'t-3', project_id:'p-2', client_id:'c-beta', title:'Carrier webhook listener setup', description:'Listen for freight triggers, process parsing.', status:'TODO', priority:'High', due_date:'2026-07-10', assigned_to:'u-admin', created_at:'2026-06-08T00:00:00Z' },
+      { id:'t-4', project_id:'p-3', client_id:'c-gamma', title:'Weekly shoot video guidelines', description:'Write down short-form script parameters.', status:'DONE', priority:'Low', due_date:'2026-06-28', assigned_to:'u-admin', created_at:'2026-06-01T00:00:00Z' },
+      { id:'t-5', project_id:'p-1', client_id:'c-alpha', title:'Daily metrics compilation automation', description:'Compute reach/impressions, post to DB.', status:'TODO', priority:'Medium', due_date:'2026-07-12', assigned_to:'u-admin', created_at:'2026-06-12T00:00:00Z' }
+    ],
+    finance: [
+      { id:'f-1', client_id:'c-alpha', description:'Enterprise Monthly Retainer', type:'REVENUE', amount:15000, division:'Ascend Software', status:'Paid', date:'2026-06-01', created_at:'2026-06-01T00:00:00Z' },
+      { id:'f-2', client_id:'c-alpha', description:'Portal Rebuild — Milestone 2', type:'REVENUE', amount:30000, division:'Ascend Software', status:'Paid', date:'2026-06-15', created_at:'2026-06-15T00:00:00Z' },
+      { id:'f-3', client_id:'c-beta', description:'Automation Suite Retainer', type:'REVENUE', amount:20000, division:'Ascend Systems', status:'Paid', date:'2026-06-01', created_at:'2026-06-01T00:00:00Z' },
+      { id:'f-4', client_id:'c-gamma', description:'Onboarding & Media Retainer', type:'REVENUE', amount:8000, division:'Ascend Media', status:'Outstanding', date:'2026-06-01', created_at:'2026-06-01T00:00:00Z' },
+      { id:'f-5', client_id:null, description:'Cloud Hosting — Sandbox Servers', type:'EXPENSE', amount:3400, division:'Ascend Software', status:'Paid', date:'2026-06-05', created_at:'2026-06-05T00:00:00Z' },
+      { id:'f-6', client_id:null, description:'Stock Media Subscriptions', type:'EXPENSE', amount:850, division:'Ascend Media', status:'Paid', date:'2026-06-12', created_at:'2026-06-12T00:00:00Z' },
+      { id:'f-7', client_id:'c-beta', description:'Dispatch Build — Milestone 2', type:'REVENUE', amount:45000, division:'Ascend Systems', status:'Forecast', date:'2026-07-15', created_at:'2026-06-20T00:00:00Z' }
+    ]
+  };
+}
+
+function loadLocalDB(){
+  let raw = localStorage.getItem('AF_LOCAL_DB');
+  if (!raw) { const seeded = seedLocalDB(); localStorage.setItem('AF_LOCAL_DB', JSON.stringify(seeded)); return seeded; }
+  try { return JSON.parse(raw); } catch(e) { const seeded = seedLocalDB(); localStorage.setItem('AF_LOCAL_DB', JSON.stringify(seeded)); return seeded; }
+}
+function saveLocalDB(db){ localStorage.setItem('AF_LOCAL_DB', JSON.stringify(db)); }
+
+/* ============================================================================
+   DATA ACCESS LAYER (transparently uses Supabase or local storage)
+============================================================================ */
+async function dbList(table, filters={}){
+  if (usingSupabase){
+    let q = supabase.from(table).select('*').order('created_at', { ascending:false });
+    Object.entries(filters).forEach(([k,v]) => { q = q.eq(k,v); });
+    const { data, error } = await q;
+    if (error) throw error;
+    return data;
+  }
+  const db = loadLocalDB();
+  let rows = db[table] || [];
+  Object.entries(filters).forEach(([k,v]) => { rows = rows.filter(r => r[k]===v); });
+  return rows;
+}
+async function dbInsert(table, row){
+  if (usingSupabase){
+    const { data, error } = await supabase.from(table).insert([row]).select().single();
+    if (error) throw error;
+    return data;
+  }
+  const db = loadLocalDB();
+  const newRow = { id: row.id || uid(), created_at: new Date().toISOString(), ...row };
+  db[table].unshift(newRow);
+  saveLocalDB(db);
+  return newRow;
+}
+async function dbUpdate(table, id, patch){
+  if (usingSupabase){
+    const { data, error } = await supabase.from(table).update(patch).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  }
+  const db = loadLocalDB();
+  const idx = db[table].findIndex(r => r.id === id);
+  if (idx > -1){ db[table][idx] = { ...db[table][idx], ...patch }; saveLocalDB(db); return db[table][idx]; }
+}
+async function dbDelete(table, id){
+  if (usingSupabase){
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    if (error) throw error;
+    return;
+  }
+  const db = loadLocalDB();
+  db[table] = db[table].filter(r => r.id !== id);
+  saveLocalDB(db);
+}
+
+/* ============================================================================
+   AUTH
+============================================================================ */
+async function fetchProfile(id){
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+
+async function logAudit(action, details){
+  if (!usingSupabase || !currentUser) return;
+  try { await supabase.from('audit_logs').insert([{ actor: currentUser.id, action, details }]); }
+  catch(e) { console.warn('Audit log skipped:', e); }
+}
+
+async function restoreSession(){
+  if (usingSupabase){
+    const { data:{ session } } = await supabase.auth.getSession();
+    if (session){
+      try { currentUser = await fetchProfile(session.user.id); }
+      catch(e){ currentUser = null; }
+    }
+  } else {
+    const localUid = localStorage.getItem('AF_LOCAL_SESSION');
+    if (localUid){
+      const db = loadLocalDB();
+      currentUser = db.profiles.find(p => p.id === localUid) || null;
+    }
+  }
+}
+
+async function signIn(email, password){
+  if (usingSupabase){
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    currentUser = await fetchProfile(data.user.id);
+    logAudit('SIGN_IN', `${currentUser.email} signed in as ${currentUser.role}`);
+  } else {
+    const db = loadLocalDB();
+    const match = db.profiles.find(p => p.email.toLowerCase() === email.trim().toLowerCase() && p.password === password);
+    if (!match) throw new Error('Invalid email or password.');
+    localStorage.setItem('AF_LOCAL_SESSION', match.id);
+    currentUser = match;
+  }
+}
+
+async function signOutUser(){
+  if (usingSupabase) { await supabase.auth.signOut(); }
+  else { localStorage.removeItem('AF_LOCAL_SESSION'); }
+  currentUser = null;
+}
+
+async function adminCreateUser({ fullName, email, password, role, clientId }){
+  if (usingSupabase){
+    const { data:{ session: adminSession } } = await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw new Error(error.message);
+    if (adminSession) {
+      await supabase.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminSession.refresh_token });
+    }
+    const newId = data.user?.id;
+    if (!newId) throw new Error('Sign-up started, but the project requires email confirmation before an ID is issued. Ask the user to confirm their email, then re-add them.');
+    const { error: pErr } = await supabase.from('profiles').insert([{ id:newId, email, full_name: fullName, role, client_id: clientId || null }]);
+    if (pErr) throw new Error(pErr.message);
+    logAudit('CREATE_USER', `${currentUser.email} created ${email} as ${role}`);
+  } else {
+    const db = loadLocalDB();
+    if (db.profiles.some(p => p.email.toLowerCase() === email.toLowerCase())) throw new Error('That email is already registered.');
+    db.profiles.unshift({ id: uid(), email, full_name: fullName, role, client_id: clientId || null, password, created_at: new Date().toISOString() });
+    saveLocalDB(db);
+  }
+}
+async function adminUpdateUser(id, patch){ return dbUpdate('profiles', id, patch); }
+async function adminDeleteUser(id){
+  if (id === currentUser.id) throw new Error("You can't remove your own account while signed in.");
+  return dbDelete('profiles', id);
+}
+
+/* ============================================================================
+   NAVIGATION / ROUTING
+============================================================================ */
+const NAV_ITEMS = [
+  { tab:'dashboard', label:'Dashboard', icon:'layout-dashboard', roles:['CEO','ADMIN','STAFF'] },
+  { tab:'portal', label:'My Portal', icon:'layout-dashboard', roles:['CLIENT'] },
+  { tab:'clients', label:'Clients', icon:'building-2', roles:['CEO','ADMIN'] },
+  { tab:'leads', label:'Leads & Pipeline', icon:'users', roles:['CEO','ADMIN','STAFF'] },
+  { tab:'projects', label:'Projects', icon:'folder-kanban', roles:['CEO','ADMIN'] },
+  { tab:'finance', label:'Finance', icon:'credit-card', roles:['CEO','ADMIN'] },
+  { tab:'team', label:'Team & Access', icon:'shield-check', roles:['CEO','ADMIN'] },
+  { tab:'settings', label:'Settings', icon:'settings', roles:['CEO','ADMIN'] },
+];
+const RENDERERS = {
+  dashboard: renderDashboard, portal: renderClientPortal, clients: renderClients,
+  leads: renderLeads, projects: renderProjects, finance: renderFinance, team: renderTeam, settings: renderSettings
+};
+
+function defaultTabForRole(role){ return role === 'CLIENT' ? 'portal' : 'dashboard'; }
+
+function renderSidebar(){
+  const nav = $('#sidebar-nav');
+  nav.innerHTML = NAV_ITEMS.filter(i => i.roles.includes(currentUser.role)).map(i => `
+    <a href="#${i.tab}" data-tab="${i.tab}" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left">
+      <i data-lucide="${i.icon}" class="w-4 h-4"></i><span>${i.label}</span>
+    </a>`).join('');
+  lucide.createIcons();
+}
+
+function handleHashNavigation(){
+  let hash = window.location.hash.substring(1) || defaultTabForRole(currentUser.role);
+  const item = NAV_ITEMS.find(i => i.tab === hash);
+  if (!item || !item.roles.includes(currentUser.role)) { hash = defaultTabForRole(currentUser.role); window.location.hash = '#'+hash; }
+
+  $$('.sidebar-nav-item').forEach(el => el.classList.toggle('active', el.getAttribute('data-tab') === hash));
+  const label = NAV_ITEMS.find(i => i.tab === hash)?.label || 'Dashboard';
+  $('#header-breadcrumb').textContent = label;
+  renderView(hash);
+}
+
+async function renderView(tab){
+  const root = $('#view-root');
+  root.innerHTML = `<div class="flex items-center justify-center h-64 text-slate-400 text-sm font-semibold">Loading…</div>`;
+  try {
+    const fn = RENDERERS[tab] || renderDashboard;
+    await fn(root);
+    lucide.createIcons();
+  } catch(e){
+    console.error(e);
+    root.innerHTML = `<div class="premium-card p-6 text-ascendRed text-sm font-semibold">Couldn't load this view: ${esc(e.message||e)}</div>`;
+  }
+}
+
+/* ============================================================================
+   MODAL HELPER
+============================================================================ */
+function openModal(title, bodyHtml){
+  $('#modal-title').textContent = title;
+  $('#modal-body').innerHTML = bodyHtml;
+  $('#modal').classList.remove('hidden');
+  lucide.createIcons();
+}
+function closeModal(){ $('#modal').classList.add('hidden'); $('#modal-body').innerHTML = ''; }
+$('#modal-close').addEventListener('click', closeModal);
+$('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+
+/* ============================================================================
+   SHARED HELPERS
+============================================================================ */
+async function getClientMap(){
+  const clients = await dbList('clients');
+  const map = {};
+  clients.forEach(c => map[c.id] = c);
+  return { clients, map };
+}
+function healthColor(score){
+  if (score >= 80) return 'text-ascendGreen';
+  if (score >= 65) return 'text-amber-500';
+  if (score >= 50) return 'text-orange-500';
+  return 'text-ascendRed';
+}
+function statusPill(status){
+  const styles = {
+    ACTIVE:'bg-emerald-500/10 text-emerald-600', ONBOARDING:'bg-amber-500/10 text-amber-600', SUSPENDED:'bg-rose-500/10 text-rose-600',
+    Discovery:'bg-slate-500/10 text-slate-500', Audit:'bg-indigo-500/10 text-indigo-500', Proposal:'bg-blue-500/10 text-blue-500',
+    Negotiation:'bg-amber-500/10 text-amber-600', Won:'bg-emerald-500/10 text-emerald-600', Lost:'bg-rose-500/10 text-rose-500',
+    TODO:'bg-slate-500/10 text-slate-500', IN_PROGRESS:'bg-blue-500/10 text-blue-500', REVIEW:'bg-amber-500/10 text-amber-600', DONE:'bg-emerald-500/10 text-emerald-600',
+    Paid:'bg-emerald-500/10 text-emerald-600', Outstanding:'bg-rose-500/10 text-rose-500', Forecast:'bg-slate-500/10 text-slate-500',
+    COMPLETED:'bg-emerald-500/10 text-emerald-600', ON_HOLD:'bg-amber-500/10 text-amber-600'
+  };
+  return `<span class="text-[10px] font-bold uppercase px-2 py-1 rounded-md ${styles[status]||'bg-slate-500/10 text-slate-500'}">${status.replace('_',' ')}</span>`;
+}
+
+/* ============================================================================
+   VIEW: DASHBOARD  (CEO / ADMIN / STAFF)
+============================================================================ */
+async function renderDashboard(root){
+  const role = currentUser.role;
+  const [clients, leads, finance, tasks] = await Promise.all([dbList('clients'), dbList('leads'), dbList('finance'), dbList('tasks')]);
+
+  if (role === 'STAFF'){
+    const open = leads.filter(l => !['Won','Lost'].includes(l.status));
+    const won = leads.filter(l => l.status === 'Won');
+    const pipelineValue = open.reduce((s,l)=>s+Number(l.value||0),0);
+    const convRate = leads.length ? Math.round((won.length/leads.length)*100) : 0;
+    root.innerHTML = `
+      <div class="view-fade-in space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          ${kpi('Open Leads', open.length, 'users')}
+          ${kpi('Pipeline Value', fmtMoney(pipelineValue), 'trending-up')}
+          ${kpi('Won Deals', won.length, 'trophy')}
+          ${kpi('Conversion Rate', convRate+'%', 'target')}
+        </div>
+        <div class="premium-card p-5">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Your Active Pipeline</h3>
+          <div class="space-y-2">
+            ${open.slice(0,8).map(l => `
+              <div class="flex items-center justify-between py-2 border-b last:border-0" style="border-color:var(--border-light)">
+                <div><p class="font-semibold text-sm">${esc(l.company)}</p><p class="text-xs text-slate-400">${esc(l.contact_name)}</p></div>
+                <div class="flex items-center gap-3">${statusPill(l.status)}<span class="font-bold text-sm">${fmtMoney(l.value)}</span></div>
+              </div>`).join('') || '<p class="text-sm text-slate-400">No active leads yet.</p>'}
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // CEO / ADMIN
+  const revenue = finance.filter(f=>f.type==='REVENUE');
+  const totalRevenue = revenue.reduce((s,f)=>s+Number(f.amount||0),0);
+  const mrr = revenue.filter(f=>f.status==='Paid').reduce((s,f)=>s+Number(f.amount||0),0);
+  const openLeadsVal = leads.filter(l=>!['Won','Lost'].includes(l.status)).reduce((s,l)=>s+Number(l.value||0),0);
+  const overdue = tasks.filter(t=>t.status!=='DONE' && t.due_date && new Date(t.due_date) < new Date()).length;
+
+  root.innerHTML = `
+    <div class="view-fade-in space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        ${kpi('Monthly Revenue (Paid)', fmtMoney(mrr), 'dollar-sign')}
+        ${kpi('Active Clients', clients.filter(c=>c.status==='ACTIVE').length, 'building-2')}
+        ${kpi('Open Pipeline Value', fmtMoney(openLeadsVal), 'trending-up')}
+        ${kpi('Overdue Tasks', overdue, 'alert-triangle')}
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="premium-card p-5 lg:col-span-2">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Revenue vs Expense</h3>
+          <div id="chart-revenue" class="h-64"></div>
+        </div>
+        <div class="premium-card p-5">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Client Health</h3>
+          <div class="space-y-3">
+            ${clients.map(c => `
+              <div>
+                <div class="flex justify-between text-xs font-semibold mb-1"><span>${esc(c.name)}</span><span class="${healthColor(c.maturity_score||50)}">${c.maturity_score||50}</span></div>
+                <div class="progress-track"><div class="progress-fill" style="width:${c.maturity_score||50}%"></div></div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="premium-card p-5">
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Recent Leads</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
+              <th class="py-2">Company</th><th>Stage</th><th>Value</th><th>Source</th></tr></thead>
+            <tbody>
+              ${leads.slice(0,6).map(l => `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
+                <td class="py-2 font-semibold">${esc(l.company)}</td><td>${statusPill(l.status)}</td><td>${fmtMoney(l.value)}</td><td class="text-slate-400">${esc(l.source)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+
+  // chart
+  const byDivision = {};
+  finance.forEach(f => { byDivision[f.division||'Other'] = byDivision[f.division||'Other'] || {rev:0, exp:0}; if (f.type==='REVENUE') byDivision[f.division||'Other'].rev += Number(f.amount||0); else byDivision[f.division||'Other'].exp += Number(f.amount||0); });
+  const cats = Object.keys(byDivision);
+  if (cats.length){
+    new ApexCharts($('#chart-revenue'), {
+      chart:{ type:'bar', height:250, toolbar:{show:false}, fontFamily:'Plus Jakarta Sans' },
+      series:[ { name:'Revenue', data:cats.map(c=>byDivision[c].rev) }, { name:'Expense', data:cats.map(c=>byDivision[c].exp) } ],
+      xaxis:{ categories:cats }, colors:['#0A66FF','#FF3B30'], plotOptions:{ bar:{ borderRadius:6, columnWidth:'55%' } },
+      legend:{ position:'top' }, dataLabels:{ enabled:false }
+    }).render();
+  } else {
+    $('#chart-revenue').innerHTML = '<p class="text-sm text-slate-400 flex items-center justify-center h-full">No finance records yet.</p>';
+  }
+}
+function kpi(label, value, icon){
+  return `<div class="premium-card p-5">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${label}</span>
+      <i data-lucide="${icon}" class="w-4 h-4 text-ascendBlue"></i>
+    </div>
+    <p class="font-heading font-extrabold text-2xl">${value}</p>
+  </div>`;
+}
+
+/* ============================================================================
+   VIEW: CLIENTS  (CEO read-only, ADMIN full CRUD)
+============================================================================ */
+async function renderClients(root){
+  const canEdit = currentUser.role === 'ADMIN';
+  const clients = await dbList('clients');
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      <div class="flex items-center justify-between">
+        <input id="client-search" placeholder="Search clients…" class="input-field max-w-xs">
+        ${canEdit ? '<button id="add-client-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Client</button>' : ''}
+      </div>
+      <div class="premium-card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
+            <th class="py-3 px-4">Company</th><th>Status</th><th>Contract</th><th>Renewal</th><th>Health</th><th></th></tr></thead>
+          <tbody id="clients-tbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+
+  function draw(list){
+    $('#clients-tbody').innerHTML = list.map(c => `
+      <tr class="border-b last:border-0 hover:bg-black/[.015]" style="border-color:var(--border-light)">
+        <td class="py-3 px-4"><span class="mr-2">${c.logo||'🏢'}</span><span class="font-semibold">${esc(c.name)}</span><br><span class="text-xs text-slate-400 pl-6">${esc(c.industry||'')}</span></td>
+        <td>${statusPill(c.status)}</td>
+        <td class="font-semibold">${fmtMoney(c.contract_value)}</td>
+        <td class="text-slate-400">${fmtDate(c.renewal_date)}</td>
+        <td><span class="font-bold ${healthColor(c.maturity_score||50)}">${c.maturity_score||50}</span></td>
+        <td class="text-right px-4">
+          ${canEdit ? `<button data-id="${c.id}" class="edit-client-btn text-ascendBlue mr-3"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+          <button data-id="${c.id}" class="del-client-btn btn-danger"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+        </td>
+      </tr>`).join('') || `<tr><td colspan="6" class="p-6 text-center text-slate-400">No clients yet.</td></tr>`;
+    lucide.createIcons();
+    if (canEdit){
+      $$('.edit-client-btn').forEach(b => b.addEventListener('click', () => openClientForm(clients.find(c=>c.id===b.dataset.id))));
+      $$('.del-client-btn').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Delete this client permanently?')) return;
+        await dbDelete('clients', b.dataset.id); toast('Client deleted.'); renderView('clients');
+      }));
+    }
+  }
+  draw(clients);
+  $('#client-search').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    draw(clients.filter(c => c.name.toLowerCase().includes(q) || (c.industry||'').toLowerCase().includes(q)));
+  });
+  if (canEdit) $('#add-client-btn').addEventListener('click', () => openClientForm(null));
+}
+
+function openClientForm(client){
+  const c = client || { name:'', industry:'', email:'', phone:'', website:'', contact_name:'', contract_value:0, renewal_date:'', status:'ONBOARDING', notes:'', maturity_score:50, logo:'🏢' };
+  openModal(client ? 'Edit Client' : 'Add New Client', `
+    <form id="client-form" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Business Name</label><input required id="f-name" class="input-field" value="${esc(c.name)}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Industry</label><input id="f-industry" class="input-field" value="${esc(c.industry)}"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Contact Email</label><input required type="email" id="f-email" class="input-field" value="${esc(c.email)}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Phone</label><input id="f-phone" class="input-field" value="${esc(c.phone)}"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Primary Contact</label><input id="f-contact" class="input-field" value="${esc(c.contact_name)}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Website</label><input id="f-website" class="input-field" value="${esc(c.website)}"></div>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Contract Value</label><input type="number" id="f-contract" class="input-field" value="${c.contract_value}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Renewal Date</label><input type="date" id="f-renewal" class="input-field" value="${c.renewal_date||''}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Health Score</label><input type="number" min="0" max="100" id="f-health" class="input-field" value="${c.maturity_score||50}"></div>
+      </div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label>
+        <select id="f-status" class="input-field">
+          ${['ONBOARDING','ACTIVE','SUSPENDED'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Notes</label><textarea id="f-notes" rows="2" class="input-field">${esc(c.notes)}</textarea></div>
+      <div class="flex justify-end gap-3 pt-3 border-t" style="border-color:var(--border-light)">
+        <button type="button" id="cancel-btn" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary">Save Client</button>
+      </div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  $('#client-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const patch = {
+      name: $('#f-name').value.trim(), industry: $('#f-industry').value.trim(), email: $('#f-email').value.trim(),
+      phone: $('#f-phone').value.trim(), contact_name: $('#f-contact').value.trim(), website: $('#f-website').value.trim(),
+      contract_value: Number($('#f-contract').value||0), renewal_date: $('#f-renewal').value || null,
+      maturity_score: Number($('#f-health').value||50), status: $('#f-status').value, notes: $('#f-notes').value.trim(), logo: c.logo
+    };
+    try {
+      if (client) await dbUpdate('clients', client.id, patch);
+      else await dbInsert('clients', { ...patch, created_by: currentUser.id });
+      toast('Client saved.'); closeModal(); renderView('clients');
+    } catch(err){ toast(err.message||'Save failed', 'err'); }
+  });
+}
+
+/* ============================================================================
+   VIEW: LEADS & PIPELINE (CEO read-only, ADMIN & STAFF full CRUD + drag)
+============================================================================ */
+const LEAD_STAGES = ['Discovery','Audit','Proposal','Negotiation','Won','Lost'];
+async function renderLeads(root){
+  const canEdit = ['ADMIN','STAFF'].includes(currentUser.role);
+  const leads = await dbList('leads');
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-slate-400">Pipeline — ${leads.length} Prospects</h3>
+        ${canEdit ? '<button id="add-lead-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Lead</button>' : ''}
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3" id="kanban-board">
+        ${LEAD_STAGES.map(stage => `
+          <div class="kanban-col premium-card p-3" data-stage="${stage}">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${stage}</span>
+              <span class="text-[10px] font-bold bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded">${leads.filter(l=>l.status===stage).length}</span>
+            </div>
+            <div class="space-y-2 lead-list" data-stage="${stage}"></div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  function drawBoard(list){
+    LEAD_STAGES.forEach(stage => {
+      const col = $(`.lead-list[data-stage="${stage}"]`);
+      const items = list.filter(l => l.status === stage);
+      col.innerHTML = items.map(l => `
+        <div class="lead-card premium-card p-3 cursor-pointer" ${canEdit?'draggable="true"':''} data-id="${l.id}">
+          <p class="font-semibold text-xs">${esc(l.company)}</p>
+          <p class="text-[11px] text-slate-400">${esc(l.contact_name)}</p>
+          <div class="flex justify-between items-center mt-2">
+            <span class="text-xs font-bold text-ascendBlue">${fmtMoney(l.value)}</span>
+            <span class="text-[10px] text-slate-400">${l.probability}%</span>
+          </div>
+        </div>`).join('');
+    });
+    $$('.lead-card').forEach(card => {
+      card.addEventListener('click', () => { if (canEdit) openLeadForm(list.find(l=>l.id===card.dataset.id)); });
+      if (canEdit){
+        card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.dataset.id); card.classList.add('dragging'); });
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+      }
+    });
+    if (canEdit){
+      $$('.lead-list').forEach(col => {
+        col.addEventListener('dragover', (e) => e.preventDefault());
+        col.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData('text/plain');
+          const newStage = col.dataset.stage;
+          const patch = { status:newStage };
+          if (newStage === 'Won') patch.probability = 100;
+          if (newStage === 'Lost') patch.probability = 0;
+          await dbUpdate('leads', id, patch);
+          toast('Lead moved to ' + newStage); renderView('leads');
+        });
+      });
+    }
+  }
+  drawBoard(leads);
+  if (canEdit) $('#add-lead-btn').addEventListener('click', () => openLeadForm(null));
+}
+
+function openLeadForm(lead){
+  const l = lead || { company:'', contact_name:'', email:'', phone:'', status:'Discovery', value:0, probability:50, source:'' };
+  openModal(lead ? 'Edit Lead' : 'Create New Lead', `
+    <form id="lead-form" class="space-y-4">
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Company</label><input required id="f-company" class="input-field" value="${esc(l.company)}"></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Contact Name</label><input required id="f-contact" class="input-field" value="${esc(l.contact_name)}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Stage</label>
+          <select id="f-stage" class="input-field">${LEAD_STAGES.map(s=>`<option ${l.status===s?'selected':''}>${s}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Email</label><input required type="email" id="f-email" class="input-field" value="${esc(l.email)}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Phone</label><input id="f-phone" class="input-field" value="${esc(l.phone||'')}"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Deal Value (R)</label><input required type="number" id="f-value" class="input-field" value="${l.value}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Probability (%)</label><input type="number" min="0" max="100" id="f-prob" class="input-field" value="${l.probability}"></div>
+      </div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Source</label><input id="f-source" class="input-field" value="${esc(l.source)}" placeholder="LinkedIn, Referral…"></div>
+      <div class="flex justify-between items-center pt-3 border-t" style="border-color:var(--border-light)">
+        ${lead ? '<button type="button" id="del-lead-btn" class="btn-danger">Delete Lead</button>' : '<span></span>'}
+        <div class="flex gap-3"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save Lead</button></div>
+      </div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  if (lead) $('#del-lead-btn').addEventListener('click', async () => {
+    if (!confirm('Delete this lead?')) return;
+    await dbDelete('leads', lead.id); toast('Lead deleted.'); closeModal(); renderView('leads');
+  });
+  $('#lead-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const patch = { company:$('#f-company').value.trim(), contact_name:$('#f-contact').value.trim(), status:$('#f-stage').value,
+      email:$('#f-email').value.trim(), phone:$('#f-phone').value.trim(), value:Number($('#f-value').value||0), probability:Number($('#f-prob').value||0), source:$('#f-source').value.trim() };
+    try {
+      if (lead) await dbUpdate('leads', lead.id, patch);
+      else await dbInsert('leads', { ...patch, created_by: currentUser.id });
+      toast('Lead saved.'); closeModal(); renderView('leads');
+    } catch(err){ toast(err.message||'Save failed', 'err'); }
+  });
+}
+
+/* ============================================================================
+   VIEW: PROJECTS  (CEO read-only, ADMIN full CRUD)
+============================================================================ */
+async function renderProjects(root){
+  const canEdit = currentUser.role === 'ADMIN';
+  const [projects, { map }] = await Promise.all([dbList('projects'), getClientMap()]);
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-slate-400">${projects.length} Projects</h3>
+        ${canEdit ? '<button id="add-proj-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Project</button>' : ''}
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ${projects.map(p => `
+          <div class="premium-card p-5">
+            <div class="flex justify-between items-start mb-2">
+              <div><h4 class="font-heading font-bold text-sm">${esc(p.name)}</h4><span class="text-xs text-slate-400">${esc(map[p.client_id]?.name||'Internal')} · ${esc(p.division)}</span></div>
+              ${statusPill(p.status)}
+            </div>
+            <p class="text-xs text-slate-400 mb-3">${esc(p.description||'')}</p>
+            <div class="progress-track mb-1"><div class="progress-fill" style="width:${p.progress}%"></div></div>
+            <div class="flex justify-between text-[11px] text-slate-400 mt-2">
+              <span>${p.progress}% complete</span><span>Due ${fmtDate(p.deadline)}</span><span class="font-bold text-slate-600 dark:text-slate-300">${fmtMoney(p.budget)}</span>
+            </div>
+            ${canEdit ? `<div class="flex justify-end gap-3 mt-3 pt-3 border-t" style="border-color:var(--border-light)">
+              <button data-id="${p.id}" class="edit-proj-btn text-ascendBlue text-xs font-bold uppercase">Edit</button>
+              <button data-id="${p.id}" class="del-proj-btn btn-danger">Delete</button></div>` : ''}
+          </div>`).join('') || '<p class="text-sm text-slate-400">No projects yet.</p>'}
+      </div>
+    </div>`;
+  if (canEdit){
+    $('#add-proj-btn').addEventListener('click', () => openProjectForm(null, map));
+    $$('.edit-proj-btn').forEach(b => b.addEventListener('click', () => openProjectForm(projects.find(p=>p.id===b.dataset.id), map)));
+    $$('.del-proj-btn').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('Delete this project?')) return;
+      await dbDelete('projects', b.dataset.id); toast('Project deleted.'); renderView('projects');
+    }));
+  }
+}
+function openProjectForm(project, clientMap){
+  const p = project || { name:'', description:'', client_id:'', division:'Ascend Software', status:'ACTIVE', progress:0, budget:0, deadline:'' };
+  const clientOptions = Object.values(clientMap).map(c=>`<option value="${c.id}" ${p.client_id===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+  openModal(project ? 'Edit Project' : 'Add Project', `
+    <form id="proj-form" class="space-y-4">
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Project Name</label><input required id="f-name" class="input-field" value="${esc(p.name)}"></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Client</label><select id="f-client" class="input-field"><option value="">— Internal —</option>${clientOptions}</select></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Division</label>
+          <select id="f-division" class="input-field">${['Ascend Media','Ascend Systems','Ascend Software'].map(d=>`<option ${p.division===d?'selected':''}>${d}</option>`).join('')}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label>
+          <select id="f-status" class="input-field">${['ACTIVE','ON_HOLD','COMPLETED'].map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Progress (%)</label><input type="number" min="0" max="100" id="f-progress" class="input-field" value="${p.progress}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Budget (R)</label><input type="number" id="f-budget" class="input-field" value="${p.budget}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Deadline</label><input type="date" id="f-deadline" class="input-field" value="${p.deadline||''}"></div>
+      </div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Description</label><textarea id="f-desc" rows="2" class="input-field">${esc(p.description)}</textarea></div>
+      <div class="flex justify-end gap-3 pt-3 border-t" style="border-color:var(--border-light)"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save Project</button></div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  $('#proj-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const patch = { name:$('#f-name').value.trim(), client_id:$('#f-client').value||null, division:$('#f-division').value, status:$('#f-status').value,
+      progress:Number($('#f-progress').value||0), budget:Number($('#f-budget').value||0), deadline:$('#f-deadline').value||null, description:$('#f-desc').value.trim() };
+    try {
+      if (project) await dbUpdate('projects', project.id, patch);
+      else await dbInsert('projects', { ...patch, created_by: currentUser.id });
+      toast('Project saved.'); closeModal(); renderView('projects');
+    } catch(err){ toast(err.message||'Save failed', 'err'); }
+  });
+}
+
+/* ============================================================================
+   VIEW: FINANCE (CEO read-only, ADMIN full CRUD)
+============================================================================ */
+async function renderFinance(root){
+  const canEdit = currentUser.role === 'ADMIN';
+  const [finance, { map }] = await Promise.all([dbList('finance'), getClientMap()]);
+  const totalRev = finance.filter(f=>f.type==='REVENUE').reduce((s,f)=>s+Number(f.amount||0),0);
+  const totalExp = finance.filter(f=>f.type==='EXPENSE').reduce((s,f)=>s+Number(f.amount||0),0);
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        ${kpi('Total Revenue', fmtMoney(totalRev), 'trending-up')}
+        ${kpi('Total Expense', fmtMoney(totalExp), 'trending-down')}
+        ${kpi('Net Position', fmtMoney(totalRev-totalExp), 'wallet')}
+      </div>
+      <div class="flex justify-end">${canEdit ? '<button id="add-fin-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Entry</button>' : ''}</div>
+      <div class="premium-card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
+            <th class="py-3 px-4">Description</th><th>Client</th><th>Division</th><th>Type</th><th>Amount</th><th>Status</th><th>Date</th><th></th></tr></thead>
+          <tbody>
+            ${finance.map(f => `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
+              <td class="py-3 px-4 font-semibold">${esc(f.description)}</td>
+              <td class="text-slate-400">${esc(map[f.client_id]?.name||'—')}</td>
+              <td class="text-slate-400">${esc(f.division||'—')}</td>
+              <td class="${f.type==='REVENUE'?'text-ascendGreen':'text-ascendRed'} font-bold text-xs">${f.type}</td>
+              <td class="font-bold">${fmtMoney(f.amount)}</td><td>${statusPill(f.status)}</td><td class="text-slate-400">${fmtDate(f.date)}</td>
+              <td class="text-right px-4">${canEdit?`<button data-id="${f.id}" class="del-fin-btn btn-danger"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`:''}</td>
+            </tr>`).join('') || `<tr><td colspan="8" class="p-6 text-center text-slate-400">No finance records yet.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  if (canEdit){
+    $('#add-fin-btn').addEventListener('click', () => openFinanceForm(map));
+    $$('.del-fin-btn').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('Delete this record?')) return;
+      await dbDelete('finance', b.dataset.id); toast('Record deleted.'); renderView('finance');
+    }));
+  }
+}
+function openFinanceForm(clientMap){
+  const clientOptions = Object.values(clientMap).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  openModal('Add Finance Record', `
+    <form id="fin-form" class="space-y-4">
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Description</label><input required id="f-desc" class="input-field"></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Type</label><select id="f-type" class="input-field"><option>REVENUE</option><option>EXPENSE</option></select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Amount (R)</label><input required type="number" id="f-amount" class="input-field"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Client</label><select id="f-client" class="input-field"><option value="">— None —</option>${clientOptions}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Division</label>
+          <select id="f-division" class="input-field">${['Ascend Media','Ascend Systems','Ascend Software'].map(d=>`<option>${d}</option>`).join('')}</select></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label><select id="f-status" class="input-field"><option>Paid</option><option>Outstanding</option><option>Forecast</option></select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Date</label><input type="date" id="f-date" class="input-field" value="${new Date().toISOString().slice(0,10)}"></div>
+      </div>
+      <div class="flex justify-end gap-3 pt-3 border-t" style="border-color:var(--border-light)"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save Record</button></div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  $('#fin-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const patch = { description:$('#f-desc').value.trim(), type:$('#f-type').value, amount:Number($('#f-amount').value||0),
+      client_id:$('#f-client').value||null, division:$('#f-division').value, status:$('#f-status').value, date:$('#f-date').value };
+    try { await dbInsert('finance', patch); toast('Record added.'); closeModal(); renderView('finance'); }
+    catch(err){ toast(err.message||'Save failed', 'err'); }
+  });
+}
+
+/* ============================================================================
+   VIEW: TEAM & ACCESS (user management — CEO & ADMIN)
+============================================================================ */
+async function renderTeam(root){
+  const [profiles, { clients, map }] = await Promise.all([dbList('profiles'), getClientMap()]);
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      ${usingSupabase ? `<div class="premium-card p-4 text-xs text-slate-400 flex items-start gap-2"><i data-lucide="info" class="w-4 h-4 flex-shrink-0 mt-0.5 text-ascendBlue"></i>
+        New accounts sign in immediately unless your Supabase project requires email confirmation — in that case, ask the user to confirm their email first.</div>` : ''}
+      <div class="flex items-center justify-between">
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-slate-400">${profiles.length} Users</h3>
+        <button id="add-user-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="user-plus" class="w-3.5 h-3.5"></i>Add User</button>
+      </div>
+      <div class="premium-card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
+            <th class="py-3 px-4">Name</th><th>Email</th><th>Role</th><th>Linked Client</th><th>Joined</th><th></th></tr></thead>
+          <tbody>
+            ${profiles.map(p => `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
+              <td class="py-3 px-4 font-semibold">${esc(p.full_name)}</td>
+              <td class="text-slate-400">${esc(p.email)}</td>
+              <td><select data-id="${p.id}" class="role-select role-badge badge-${p.role} border-0 bg-transparent cursor-pointer">${['CEO','ADMIN','STAFF','CLIENT'].map(r=>`<option value="${r}" ${p.role===r?'selected':''}>${r}</option>`).join('')}</select></td>
+              <td class="text-slate-400">${esc(map[p.client_id]?.name || '—')}</td>
+              <td class="text-slate-400">${fmtDate(p.created_at)}</td>
+              <td class="text-right px-4"><button data-id="${p.id}" class="del-user-btn btn-danger"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+
+  $$('.role-select').forEach(sel => sel.addEventListener('change', async () => {
+    const newRole = sel.value;
+    let clientId = null;
+    if (newRole === 'CLIENT'){
+      const pick = prompt('Link to which client? Enter exact company name:\n' + clients.map(c=>c.name).join(', '));
+      const match = clients.find(c => c.name.toLowerCase() === (pick||'').toLowerCase());
+      if (!match){ toast('No matching client found — role not changed.', 'err'); renderView('team'); return; }
+      clientId = match.id;
+    }
+    try { await adminUpdateUser(sel.dataset.id, { role:newRole, client_id:clientId }); toast('Role updated.'); renderView('team'); }
+    catch(err){ toast(err.message||'Update failed', 'err'); }
+  }));
+  $$('.del-user-btn').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm("Remove this user's access?")) return;
+    try { await adminDeleteUser(b.dataset.id); toast('User removed.'); renderView('team'); }
+    catch(err){ toast(err.message||'Delete failed', 'err'); }
+  }));
+  $('#add-user-btn').addEventListener('click', () => openUserForm(clients));
+}
+function openUserForm(clients){
+  const clientOptions = clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  openModal('Add New User', `
+    <form id="user-form" class="space-y-4">
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Full Name</label><input required id="f-name" class="input-field"></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Email</label><input required type="email" id="f-email" class="input-field"></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Temporary Password</label><input required type="text" minlength="8" id="f-password" class="input-field" placeholder="At least 8 characters"></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Role</label>
+        <select id="f-role" class="input-field">${['CEO','ADMIN','STAFF','CLIENT'].map(r=>`<option value="${r}">${r}</option>`).join('')}</select></div>
+      <div id="client-link-wrap" class="hidden"><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Linked Client</label>
+        <select id="f-client" class="input-field"><option value="">— Select —</option>${clientOptions}</select></div>
+      <div class="flex justify-end gap-3 pt-3 border-t" style="border-color:var(--border-light)"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Create User</button></div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  $('#f-role').addEventListener('change', (e) => $('#client-link-wrap').classList.toggle('hidden', e.target.value !== 'CLIENT'));
+  $('#user-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const role = $('#f-role').value;
+    if (role === 'CLIENT' && !$('#f-client').value){ toast('Select a client to link this account to.', 'err'); return; }
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Creating…';
+    try {
+      await adminCreateUser({ fullName:$('#f-name').value.trim(), email:$('#f-email').value.trim(), password:$('#f-password').value, role, clientId: role==='CLIENT' ? $('#f-client').value : null });
+      toast('User created.'); closeModal(); renderView('team');
+    } catch(err){ toast(err.message||'Could not create user', 'err'); btn.disabled = false; btn.textContent = 'Create User'; }
+  });
+}
+
+/* ============================================================================
+   VIEW: SETTINGS
+============================================================================ */
+async function renderSettings(root){
+  const cfg = JSON.parse(localStorage.getItem('AF_SUPABASE_CONFIG') || '{}');
+  root.innerHTML = `
+    <div class="view-fade-in space-y-6 max-w-xl">
+      <div class="premium-card p-6">
+        <div class="flex items-center justify-between border-b pb-3 mb-4" style="border-color:var(--border-light)">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider">Supabase Connection</h3>
+          <span class="text-[9px] font-bold uppercase px-2.5 py-1 rounded-full ${usingSupabase?'bg-emerald-500/10 text-emerald-600':'bg-amber-500/10 text-amber-600'}">${usingSupabase?'Connected':'Local Demo Mode'}</span>
+        </div>
+        <div class="space-y-3 text-sm">
+          <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Project URL</label><input id="s-url" class="input-field" value="${esc(cfg.url||DEFAULT_SUPABASE_URL)}" placeholder="https://your-project.supabase.co"></div>
+          <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Anon Key</label><input id="s-key" type="password" class="input-field" value="${esc(cfg.key||'')}" placeholder="eyJhbGci..."></div>
+          <div class="flex gap-2 pt-2"><button id="s-save" class="btn-primary">Save &amp; Reload</button><button id="s-clear" class="btn-ghost">Use Local Demo</button></div>
+        </div>
+      </div>
+      <div class="premium-card p-6">
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-3">Appearance</h3>
+        <button id="s-theme" class="btn-ghost">Toggle Dark / Light Mode</button>
+      </div>
+      ${!usingSupabase ? `<div class="premium-card p-6"><h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-3">Demo Data</h3>
+        <p class="text-xs text-slate-400 mb-3">Wipe local changes and restore the original seeded demo dataset.</p>
+        <button id="s-reset" class="btn-ghost">Reset Demo Data</button></div>` : ''}
+    </div>`;
+  $('#s-save').addEventListener('click', () => {
+    const url = $('#s-url').value.trim(), key = $('#s-key').value.trim();
+    if (!url || !key){ toast('Both fields are required.', 'err'); return; }
+    localStorage.removeItem('AF_FORCE_LOCAL');
+    localStorage.setItem('AF_SUPABASE_CONFIG', JSON.stringify({ url, key }));
+    toast('Reloading…'); setTimeout(()=>window.location.reload(), 600);
+  });
+  $('#s-clear').addEventListener('click', () => {
+    if (!confirm('Disconnect Supabase and switch back to local demo mode?')) return;
+    localStorage.removeItem('AF_SUPABASE_CONFIG'); localStorage.setItem('AF_FORCE_LOCAL','1'); window.location.reload();
+  });
+  $('#s-theme').addEventListener('click', () => $('#theme-toggle-btn').click());
+  const resetBtn = $('#s-reset'); if (resetBtn) resetBtn.addEventListener('click', () => {
+    if (!confirm('This will erase local edits and reseed demo data. Continue?')) return;
+    localStorage.removeItem('AF_LOCAL_DB'); toast('Demo data reset.'); renderView('settings');
+  });
+}
+
+/* ============================================================================
+   VIEW: CLIENT PORTAL (CLIENT role only)
+============================================================================ */
+async function renderClientPortal(root){
+  if (!currentUser.client_id){
+    root.innerHTML = `<div class="premium-card p-8 text-center text-slate-400">Your account isn't linked to a client record yet. Contact your AscendFlow administrator.</div>`;
+    return;
+  }
+  let clientRow;
+  if (usingSupabase){
+    const { data } = await supabase.from('clients').select('*').eq('id', currentUser.client_id).single();
+    clientRow = data;
+  } else {
+    clientRow = loadLocalDB().clients.find(c=>c.id===currentUser.client_id);
+  }
+  const [projects, tasks, finance] = await Promise.all([
+    dbList('projects', { client_id: currentUser.client_id }),
+    dbList('tasks', { client_id: currentUser.client_id }),
+    dbList('finance', { client_id: currentUser.client_id })
+  ]);
+  const c = clientRow || {};
+  root.innerHTML = `
+    <div class="view-fade-in space-y-6">
+      <div class="premium-card p-6 flex items-center gap-4">
+        <div class="text-4xl">${c.logo||'🏢'}</div>
+        <div class="flex-1">
+          <h2 class="font-heading font-extrabold text-xl">${esc(c.name||'')}</h2>
+          <p class="text-xs text-slate-400">${esc(c.industry||'')} · Status ${statusPill(c.status||'ACTIVE')}</p>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] font-bold uppercase text-slate-400 block">Health Score</span>
+          <span class="font-heading font-extrabold text-2xl ${healthColor(c.maturity_score||50)}">${c.maturity_score||50}</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        ${kpi('Contract Value', fmtMoney(c.contract_value), 'file-text')}
+        ${kpi('Renewal Date', fmtDate(c.renewal_date), 'calendar')}
+        ${kpi('Active Projects', projects.filter(p=>p.status==='ACTIVE').length, 'folder-kanban')}
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="premium-card p-5">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Your Projects</h3>
+          <div class="space-y-4">
+            ${projects.map(p => `<div>
+              <div class="flex justify-between text-sm font-semibold mb-1"><span>${esc(p.name)}</span>${statusPill(p.status)}</div>
+              <div class="progress-track mb-1"><div class="progress-fill" style="width:${p.progress}%"></div></div>
+              <span class="text-[11px] text-slate-400">${p.progress}% · Due ${fmtDate(p.deadline)}</span>
+            </div>`).join('') || '<p class="text-sm text-slate-400">No active projects.</p>'}
+          </div>
+        </div>
+        <div class="premium-card p-5">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Open Tasks</h3>
+          <div class="space-y-2">
+            ${tasks.filter(t=>t.status!=='DONE').map(t => `<div class="flex justify-between items-center py-2 border-b last:border-0" style="border-color:var(--border-light)">
+              <span class="text-sm font-medium">${esc(t.title)}</span>${statusPill(t.status)}</div>`).join('') || '<p class="text-sm text-slate-400">Nothing outstanding.</p>'}
+          </div>
+        </div>
+      </div>
+
+      <div class="premium-card p-5">
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Invoices</h3>
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)"><th class="py-2">Description</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody>${finance.map(f => `<tr class="border-b last:border-0" style="border-color:var(--border-light)"><td class="py-2 font-semibold">${esc(f.description)}</td><td>${fmtMoney(f.amount)}</td><td>${statusPill(f.status)}</td><td class="text-slate-400">${fmtDate(f.date)}</td></tr>`).join('') || '<tr><td colspan="4" class="p-4 text-center text-slate-400">No invoices yet.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+/* ============================================================================
+   BOOTSTRAP / EVENT WIRING
+============================================================================ */
+function syncShellUI(){
+  $('#sidebar-user-name').textContent = currentUser.full_name || currentUser.email.split('@')[0];
+  $('#sidebar-avatar').textContent = (currentUser.full_name||currentUser.email).substring(0,2).toUpperCase();
+  const roleBadge = $('#sidebar-user-role'); roleBadge.textContent = currentUser.role; roleBadge.className = 'role-badge badge-' + currentUser.role;
+  const pill = $('#mode-pill'); pill.textContent = usingSupabase ? 'Supabase Connected' : 'Local Demo Mode';
+  pill.className = 'text-[9px] font-bold uppercase px-2.5 py-1 rounded-full ' + (usingSupabase ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600');
+}
+
+function showApp(){
+  $('#auth-screen').classList.add('hidden');
+  $('#app-shell').classList.remove('hidden'); $('#app-shell').classList.add('flex');
+  syncShellUI(); renderSidebar(); handleHashNavigation();
+}
+function showAuth(){
+  $('#app-shell').classList.add('hidden'); $('#app-shell').classList.remove('flex');
+  $('#auth-screen').classList.remove('hidden');
+  const connBadge = $('#conn-badge');
+  connBadge.textContent = usingSupabase ? 'Supabase Connected' : 'Local Demo Mode';
+  connBadge.className = 'text-[9px] font-bold uppercase px-2.5 py-1 rounded-full ' + (usingSupabase ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600');
+  $('#demo-creds').classList.toggle('hidden', usingSupabase);
+}
+
+async function main(){
+  await initSupabase();
+  await restoreSession();
+  const theme = localStorage.getItem('AF_THEME') || 'light';
+  document.body.classList.toggle('dark-mode', theme === 'dark');
+
+  if (currentUser) showApp(); else showAuth();
+  lucide.createIcons();
+
+  $('#login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = $('#login-error'); errEl.classList.add('hidden');
+    try {
+      await signIn($('#login-email').value.trim(), $('#login-password').value);
+      showApp();
+    } catch(err){ errEl.textContent = err.message || 'Sign-in failed.'; errEl.classList.remove('hidden'); }
+  });
+
+  $$('.demo-login-btn').forEach(b => b.addEventListener('click', async () => {
+    $('#login-email').value = b.dataset.email; $('#login-password').value = b.dataset.pass;
+    try { await signIn(b.dataset.email, b.dataset.pass); showApp(); }
+    catch(err){ toast(err.message, 'err'); }
+  }));
+
+  $('#toggle-conn-panel').addEventListener('click', () => $('#conn-panel').classList.toggle('hidden'));
+  $('#conn-save').addEventListener('click', () => {
+    const url = $('#conn-url').value.trim(), key = $('#conn-key').value.trim();
+    if (!url || !key){ toast('Enter both the URL and Anon Key.', 'err'); return; }
+    localStorage.removeItem('AF_FORCE_LOCAL');
+    localStorage.setItem('AF_SUPABASE_CONFIG', JSON.stringify({ url, key }));
+    window.location.reload();
+  });
+  $('#conn-clear').addEventListener('click', () => {
+    localStorage.removeItem('AF_SUPABASE_CONFIG');
+    localStorage.setItem('AF_FORCE_LOCAL','1');
+    window.location.reload();
+  });
+
+  $('#logout-btn').addEventListener('click', async () => { await signOutUser(); window.location.hash = ''; showAuth(); });
+  $('#theme-toggle-btn').addEventListener('click', () => {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('AF_THEME', isDark ? 'dark' : 'light');
+    handleHashNavigation();
+  });
+
+  window.addEventListener('hashchange', () => { if (currentUser) handleHashNavigation(); });
+}
+
+main();
+</script>
+</body>
+</html>
