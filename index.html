@@ -7,6 +7,8 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
   tailwind.config = {
     darkMode: 'class',
@@ -528,9 +530,55 @@ function statusPill(status){
   return `<span class="text-[10px] font-bold uppercase px-2 py-1 rounded-md ${styles[status]||'bg-slate-500/10 text-slate-500'}">${status.replace('_',' ')}</span>`;
 }
 
+async function downloadDashboardPDF(){
+  const target = document.getElementById('dashboard-capture');
+  if (!target){ toast('Nothing to export yet.', 'err'); return; }
+  const btn = document.getElementById('dl-dashboard-pdf');
+  if (btn){ btn.disabled = true; btn.textContent = 'Generating…'; }
+  try {
+    const bg = getComputedStyle(document.body).getPropertyValue('--bg-primary').trim() || '#ffffff';
+    const canvas = await html2canvas(target, { backgroundColor: bg, scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    let heightLeft = imgHeight, position = 0;
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while (heightLeft > 0){
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+    pdf.save(`AscendFlow-Dashboard-${new Date().toISOString().slice(0,10)}.pdf`);
+    toast('Dashboard PDF downloaded.');
+  } catch(e){
+    console.error(e);
+    toast('Could not generate the PDF.', 'err');
+  } finally {
+    if (btn){ btn.disabled = false; btn.innerHTML = '<i data-lucide="download" class="w-3.5 h-3.5"></i>Download PDF'; lucide.createIcons(); }
+  }
+}
+
 /* ============================================================================
    VIEW: DASHBOARD  (CEO / ADMIN / STAFF)
 ============================================================================ */
+function getMonthRange(){
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth()+1, 1);
+  return { start, end };
+}
+function isInMonth(dateStr, range){
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  return d >= range.start && d < range.end;
+}
+
 async function renderDashboard(root){
   const role = currentUser.role;
   const [clients, leads, finance, tasks] = await Promise.all([dbList('clients'), dbList('leads'), dbList('finance'), dbList('tasks')]);
@@ -563,18 +611,27 @@ async function renderDashboard(root){
   }
 
   // CEO / ADMIN
-  const revenue = finance.filter(f=>f.type==='REVENUE');
+  const revenue = finance.filter(f=>f.type==='REVENUE' && f.status==='Paid');
+  const expenses = finance.filter(f=>f.type==='EXPENSE');
   const totalRevenue = revenue.reduce((s,f)=>s+Number(f.amount||0),0);
-  const mrr = revenue.filter(f=>f.status==='Paid').reduce((s,f)=>s+Number(f.amount||0),0);
+  const monthRange = getMonthRange();
+  const monthlyRevenue = revenue.filter(f=>isInMonth(f.date, monthRange)).reduce((s,f)=>s+Number(f.amount||0),0);
+  const monthlyExpenses = expenses.filter(f=>isInMonth(f.date, monthRange)).reduce((s,f)=>s+Number(f.amount||0),0);
   const openLeadsVal = leads.filter(l=>!['Won','Lost'].includes(l.status)).reduce((s,l)=>s+Number(l.value||0),0);
   const overdue = tasks.filter(t=>t.status!=='DONE' && t.due_date && new Date(t.due_date) < new Date()).length;
 
   root.innerHTML = `
     <div class="view-fade-in space-y-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        ${kpi('Monthly Revenue (Paid)', fmtMoney(mrr), 'dollar-sign')}
+      <div class="flex items-center justify-end -mt-2">
+        <button id="dl-dashboard-pdf" class="btn-ghost flex items-center gap-1.5"><i data-lucide="download" class="w-3.5 h-3.5"></i>Download PDF</button>
+      </div>
+      <div id="dashboard-capture" class="space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        ${kpi('Total Revenue (Paid)', fmtMoney(totalRevenue), 'dollar-sign')}
+        ${kpi('Monthly Revenue', fmtMoney(monthlyRevenue), 'trending-up')}
+        ${kpi('Monthly Expenses', fmtMoney(monthlyExpenses), 'trending-down')}
         ${kpi('Active Clients', clients.filter(c=>c.status==='ACTIVE').length, 'building-2')}
-        ${kpi('Open Pipeline Value', fmtMoney(openLeadsVal), 'trending-up')}
+        ${kpi('Open Pipeline Value', fmtMoney(openLeadsVal), 'users')}
         ${kpi('Overdue Tasks', overdue, 'alert-triangle')}
       </div>
 
@@ -609,7 +666,11 @@ async function renderDashboard(root){
           </table>
         </div>
       </div>
+      </div>
     </div>`;
+
+  $('#dl-dashboard-pdf').addEventListener('click', () => downloadDashboardPDF());
+
 
   // chart
   const byDivision = {};
@@ -740,6 +801,7 @@ function openClientForm(client){
    VIEW: LEADS & PIPELINE (CEO read-only, ADMIN & STAFF full CRUD + drag)
 ============================================================================ */
 const LEAD_STAGES = ['Discovery','Audit','Proposal','Negotiation','Won','Lost'];
+const DIVISIONS = ['All Divisions','Ascend Media','Ascend Systems','Ascend Software'];
 async function renderLeads(root){
   const canEdit = ['ADMIN','STAFF'].includes(currentUser.role);
   const leads = await dbList('leads');
@@ -869,6 +931,7 @@ async function renderProjects(root){
               <span>${p.progress}% complete</span><span>Due ${fmtDate(p.deadline)}</span><span class="font-bold text-slate-600 dark:text-slate-300">${fmtMoney(p.budget)}</span>
             </div>
             ${canEdit ? `<div class="flex justify-end gap-3 mt-3 pt-3 border-t" style="border-color:var(--border-light)">
+              ${p.status!=='COMPLETED' ? `<button data-id="${p.id}" class="complete-proj-btn text-ascendGreen text-xs font-bold uppercase flex items-center gap-1"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>Mark Complete</button>` : `<span class="text-ascendGreen text-xs font-bold uppercase flex items-center gap-1"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>Completed</span>`}
               <button data-id="${p.id}" class="edit-proj-btn text-ascendBlue text-xs font-bold uppercase">Edit</button>
               <button data-id="${p.id}" class="del-proj-btn btn-danger">Delete</button></div>` : ''}
           </div>`).join('') || '<p class="text-sm text-slate-400">No projects yet.</p>'}
@@ -877,6 +940,11 @@ async function renderProjects(root){
   if (canEdit){
     $('#add-proj-btn').addEventListener('click', () => openProjectForm(null, map));
     $$('.edit-proj-btn').forEach(b => b.addEventListener('click', () => openProjectForm(projects.find(p=>p.id===b.dataset.id), map)));
+    $$('.complete-proj-btn').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('Mark this project as complete? Progress will be set to 100%.')) return;
+      await dbUpdate('projects', b.dataset.id, { status:'COMPLETED', progress:100 });
+      toast('Project marked complete.'); renderView('projects');
+    }));
     $$('.del-proj-btn').forEach(b => b.addEventListener('click', async () => {
       if (!confirm('Delete this project?')) return;
       await dbDelete('projects', b.dataset.id); toast('Project deleted.'); renderView('projects');
@@ -892,7 +960,7 @@ function openProjectForm(project, clientMap){
       <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Client</label><select id="f-client" class="input-field"><option value="">— Internal —</option>${clientOptions}</select></div>
       <div class="grid grid-cols-2 gap-4">
         <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Division</label>
-          <select id="f-division" class="input-field">${['Ascend Media','Ascend Systems','Ascend Software'].map(d=>`<option ${p.division===d?'selected':''}>${d}</option>`).join('')}</select></div>
+          <select id="f-division" class="input-field">${DIVISIONS.map(d=>`<option ${p.division===d?'selected':''}>${d}</option>`).join('')}</select></div>
         <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label>
           <select id="f-status" class="input-field">${['ACTIVE','ON_HOLD','COMPLETED'].map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
       </div>
@@ -922,36 +990,49 @@ function openProjectForm(project, clientMap){
 ============================================================================ */
 async function renderFinance(root){
   const canEdit = currentUser.role === 'ADMIN';
-  const [finance, { map }] = await Promise.all([dbList('finance'), getClientMap()]);
-  const totalRev = finance.filter(f=>f.type==='REVENUE').reduce((s,f)=>s+Number(f.amount||0),0);
-  const totalExp = finance.filter(f=>f.type==='EXPENSE').reduce((s,f)=>s+Number(f.amount||0),0);
+  const [finance, { map }, projects] = await Promise.all([dbList('finance'), getClientMap(), dbList('projects')]);
+  const projectMap = {}; projects.forEach(p => projectMap[p.id] = p);
+  const paidRevenue = finance.filter(f=>f.type==='REVENUE' && f.status==='Paid');
+  const expenses = finance.filter(f=>f.type==='EXPENSE');
+  const totalRev = paidRevenue.reduce((s,f)=>s+Number(f.amount||0),0);
+  const totalExp = expenses.reduce((s,f)=>s+Number(f.amount||0),0);
+  const monthRange = getMonthRange();
+  const monthlyRev = paidRevenue.filter(f=>isInMonth(f.date, monthRange)).reduce((s,f)=>s+Number(f.amount||0),0);
+  const monthlyExp = expenses.filter(f=>isInMonth(f.date, monthRange)).reduce((s,f)=>s+Number(f.amount||0),0);
   root.innerHTML = `
     <div class="view-fade-in space-y-4">
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        ${kpi('Total Revenue', fmtMoney(totalRev), 'trending-up')}
-        ${kpi('Total Expense', fmtMoney(totalExp), 'trending-down')}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        ${kpi('Total Revenue (Paid)', fmtMoney(totalRev), 'trending-up')}
+        ${kpi('Total Expenses', fmtMoney(totalExp), 'trending-down')}
         ${kpi('Net Position', fmtMoney(totalRev-totalExp), 'wallet')}
+        ${kpi('Monthly Revenue', fmtMoney(monthlyRev), 'calendar')}
+        ${kpi('Monthly Expenses', fmtMoney(monthlyExp), 'calendar')}
       </div>
-      <div class="flex justify-end">${canEdit ? '<button id="add-fin-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Entry</button>' : ''}</div>
+      <div class="flex justify-end gap-2">
+        ${canEdit ? '<button id="add-deposit-btn" class="btn-ghost flex items-center gap-1.5"><i data-lucide="piggy-bank" class="w-3.5 h-3.5"></i>Add Deposit</button>' : ''}
+        ${canEdit ? '<button id="add-fin-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Entry</button>' : ''}
+      </div>
       <div class="premium-card overflow-hidden">
         <table class="w-full text-sm">
           <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
-            <th class="py-3 px-4">Description</th><th>Client</th><th>Division</th><th>Type</th><th>Amount</th><th>Status</th><th>Date</th><th></th></tr></thead>
+            <th class="py-3 px-4">Description</th><th>Client</th><th>Project</th><th>Division</th><th>Type</th><th>Amount</th><th>Status</th><th>Date</th><th></th></tr></thead>
           <tbody>
             ${finance.map(f => `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
               <td class="py-3 px-4 font-semibold">${esc(f.description)}</td>
               <td class="text-slate-400">${esc(map[f.client_id]?.name||'—')}</td>
+              <td class="text-slate-400">${esc(projectMap[f.project_id]?.name||'—')}</td>
               <td class="text-slate-400">${esc(f.division||'—')}</td>
               <td class="${f.type==='REVENUE'?'text-ascendGreen':'text-ascendRed'} font-bold text-xs">${f.type}</td>
               <td class="font-bold">${fmtMoney(f.amount)}</td><td>${statusPill(f.status)}</td><td class="text-slate-400">${fmtDate(f.date)}</td>
               <td class="text-right px-4">${canEdit?`<button data-id="${f.id}" class="del-fin-btn btn-danger"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`:''}</td>
-            </tr>`).join('') || `<tr><td colspan="8" class="p-6 text-center text-slate-400">No finance records yet.</td></tr>`}
+            </tr>`).join('') || `<tr><td colspan="9" class="p-6 text-center text-slate-400">No finance records yet.</td></tr>`}
           </tbody>
         </table>
       </div>
     </div>`;
   if (canEdit){
     $('#add-fin-btn').addEventListener('click', () => openFinanceForm(map));
+    $('#add-deposit-btn').addEventListener('click', () => openDepositForm(projects, map));
     $$('.del-fin-btn').forEach(b => b.addEventListener('click', async () => {
       if (!confirm('Delete this record?')) return;
       await dbDelete('finance', b.dataset.id); toast('Record deleted.'); renderView('finance');
@@ -970,7 +1051,7 @@ function openFinanceForm(clientMap){
       <div class="grid grid-cols-2 gap-4">
         <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Client</label><select id="f-client" class="input-field"><option value="">— None —</option>${clientOptions}</select></div>
         <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Division</label>
-          <select id="f-division" class="input-field">${['Ascend Media','Ascend Systems','Ascend Software'].map(d=>`<option>${d}</option>`).join('')}</select></div>
+          <select id="f-division" class="input-field">${DIVISIONS.map(d=>`<option>${d}</option>`).join('')}</select></div>
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label><select id="f-status" class="input-field"><option>Paid</option><option>Outstanding</option><option>Forecast</option></select></div>
@@ -984,6 +1065,43 @@ function openFinanceForm(clientMap){
     const patch = { description:$('#f-desc').value.trim(), type:$('#f-type').value, amount:Number($('#f-amount').value||0),
       client_id:$('#f-client').value||null, division:$('#f-division').value, status:$('#f-status').value, date:$('#f-date').value };
     try { await dbInsert('finance', patch); toast('Record added.'); closeModal(); renderView('finance'); }
+    catch(err){ toast(err.message||'Save failed', 'err'); }
+  });
+}
+
+function openDepositForm(projects, clientMap){
+  if (!projects.length){ toast('Add a project first before recording a deposit.', 'err'); return; }
+  const projectOptions = projects.map(p => `<option value="${p.id}">${esc(p.name)} — ${esc(clientMap[p.client_id]?.name || 'Internal')}</option>`).join('');
+  openModal('Add Project Deposit', `
+    <form id="deposit-form" class="space-y-4">
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Project</label>
+        <select required id="f-project" class="input-field">${projectOptions}</select></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Deposit Amount (R)</label><input required type="number" id="f-amount" class="input-field" placeholder="e.g. 25000"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Date</label><input type="date" id="f-date" class="input-field" value="${new Date().toISOString().slice(0,10)}"></div>
+      </div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label>
+        <select id="f-status" class="input-field"><option>Paid</option><option>Outstanding</option></select></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Note (optional)</label><input id="f-note" class="input-field" placeholder="e.g. 50% upfront deposit"></div>
+      <div class="flex justify-end gap-3 pt-3 border-t" style="border-color:var(--border-light)"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save Deposit</button></div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  $('#deposit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const project = projects.find(p => p.id === $('#f-project').value);
+    if (!project){ toast('Select a project.', 'err'); return; }
+    const note = $('#f-note').value.trim();
+    const patch = {
+      description: `Deposit — ${project.name}${note ? ' (' + note + ')' : ''}`,
+      type: 'REVENUE',
+      amount: Number($('#f-amount').value||0),
+      client_id: project.client_id || null,
+      project_id: project.id,
+      division: project.division,
+      status: $('#f-status').value,
+      date: $('#f-date').value
+    };
+    try { await dbInsert('finance', patch); toast('Deposit recorded.'); closeModal(); renderView('finance'); }
     catch(err){ toast(err.message||'Save failed', 'err'); }
   });
 }
