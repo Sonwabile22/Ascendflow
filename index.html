@@ -10,6 +10,7 @@
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   tailwind.config = {
     darkMode: 'class',
@@ -66,6 +67,8 @@ body.dark-mode ::-webkit-scrollbar-thumb{background:#334155}
 .toast.ok{ border-color:#1F8A4C; color:#166339; }
 .progress-track{ background:var(--border-light); border-radius:999px; height:6px; overflow:hidden; }
 .progress-fill{ background:#0E4F73; height:100%; border-radius:999px; }
+.custom-tab-btn{ color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-1px; }
+.custom-tab-btn.active{ border-bottom-color:#0E4F73; color:#0E4F73; }
 </style>
 </head>
 <body class="transition-colors duration-300">
@@ -176,13 +179,25 @@ body.dark-mode ::-webkit-scrollbar-thumb{background:#334155}
   </aside>
 
   <div class="flex-1 flex flex-col min-w-0">
-    <header class="h-16 flex items-center justify-between px-6 border-b flex-shrink-0" style="border-color:var(--border-light); background:var(--bg-secondary)">
-      <div>
+    <header class="h-16 flex items-center justify-between px-6 border-b flex-shrink-0 gap-4" style="border-color:var(--border-light); background:var(--bg-secondary)">
+      <div class="flex-shrink-0">
         <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">AscendFlow OS</span>
         <h2 id="header-breadcrumb" class="font-heading font-bold text-base leading-tight">Dashboard</h2>
       </div>
-      <div class="flex items-center gap-3">
+      <div id="global-search-wrap" class="relative flex-1 max-w-md hidden">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input id="global-search-input" type="text" placeholder="Search clients, leads, projects, tasks…" class="input-field pl-9" autocomplete="off">
+        <div id="global-search-results" class="hidden absolute top-full left-0 right-0 mt-2 premium-card p-2 max-h-96 overflow-y-auto z-40"></div>
+      </div>
+      <div class="flex items-center gap-3 flex-shrink-0">
         <span id="mode-pill" class="text-[9px] font-bold uppercase px-2.5 py-1 rounded-full"></span>
+        <div id="notif-wrap" class="relative hidden">
+          <button id="notif-btn" class="w-9 h-9 rounded-lg flex items-center justify-center border relative" style="border-color:var(--border-light)">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span id="notif-dot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-ascendRed"></span>
+          </button>
+          <div id="notif-panel" class="hidden absolute top-full right-0 mt-2 w-80 premium-card p-3 max-h-96 overflow-y-auto z-40"></div>
+        </div>
         <button id="theme-toggle-btn" class="w-9 h-9 rounded-lg flex items-center justify-center border" style="border-color:var(--border-light)">
           <i data-lucide="moon" class="w-4 h-4"></i>
         </button>
@@ -201,6 +216,17 @@ body.dark-mode ::-webkit-scrollbar-thumb{background:#334155}
       <button id="modal-close" class="p-1.5 rounded-lg border" style="border-color:var(--border-light)"><i data-lucide="x" class="w-4 h-4"></i></button>
     </div>
     <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ============================= DETAIL MODAL (wider, for record detail pages) ============================= -->
+<div id="detail-modal" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-[color:var(--bg-secondary)] w-full max-w-4xl rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b pb-4 mb-4" style="border-color:var(--border-light)">
+      <h2 id="detail-modal-title" class="font-heading font-bold text-lg">Title</h2>
+      <button id="detail-modal-close" class="p-1.5 rounded-lg border" style="border-color:var(--border-light)"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <div id="detail-modal-body"></div>
   </div>
 </div>
 
@@ -266,42 +292,74 @@ function seedLocalDB(){
       { id:'u-client', email:'gvance@apexhealth.com', password:'Client12345!', full_name:'Dr. Gregory Vance', role:'CLIENT', client_id:'c-alpha', created_at:'2026-01-10T00:00:00Z' }
     ],
     clients: [
-      { id:'c-alpha', name:'Apex Health Systems', industry:'Healthcare Tech', logo:'🏥', website:'https://apexhealthsystems.com', contact_name:'Dr. Gregory Vance', phone:'+1 (555) 349-2394', email:'gvance@apexhealth.com', revenue:4500000, goal:6000000, employees:120, tags:'Enterprise, Active, Healthcare', notes:'Migrating client portal to React; boosting automation conversion.', status:'ACTIVE', contract_value:180000, renewal_date:'2027-01-15', maturity_score:74, created_at:'2025-11-01T00:00:00Z' },
-      { id:'c-beta', name:'Velo Logistics', industry:'Supply Chain & Freight', logo:'🚚', website:'https://velologistics.io', contact_name:'Sophia Martinez', phone:'+1 (555) 902-1845', email:'smartinez@velologistics.io', revenue:12000000, goal:15000000, employees:450, tags:'Logistics, Automated', notes:'Deploying dispatch tools and carrier email automation.', status:'ACTIVE', contract_value:240000, renewal_date:'2026-11-22', maturity_score:62, created_at:'2025-10-15T00:00:00Z' },
-      { id:'c-gamma', name:'Pulse Fitness', industry:'Gym Franchise & Wellness', logo:'⚡', website:'https://pulsewellness.com', contact_name:'Brett Harper', phone:'+1 (555) 124-7890', email:'bharper@pulsewellness.com', revenue:1800000, goal:2500000, employees:60, tags:'Media Engine, B2C', notes:'Short-form video strategy and mobile membership app.', status:'ONBOARDING', contract_value:95000, renewal_date:'2026-08-30', maturity_score:48, created_at:'2026-02-20T00:00:00Z' }
+      { id:'c-alpha', name:'Apex Health Systems', industry:'Healthcare Tech', logo:'🏥', website:'https://apexhealthsystems.com', contact_name:'Dr. Gregory Vance', phone:'+1 (555) 349-2394', email:'gvance@apexhealth.com', revenue:4500000, goal:6000000, employees:120, current_crm:'Salesforce', current_website:'WordPress', marketing_channels:'LinkedIn, Referral, Google Ads', sales_process:'Discovery call → clinical demo → security review → contract', assigned_strategist:'u-admin', tags:'Enterprise, Active, Healthcare', notes:'Migrating client portal to React; boosting automation conversion.', status:'ACTIVE', lifecycle_stage:'Growth', contract_value:180000, renewal_date:'2027-01-15', maturity_breakdown:{'Marketing':70,'Sales':65,'Operations':72,'Technology':80,'Customer Experience':75,'Data':60,'Finance':68,'Leadership':74}, created_at:'2025-11-01T00:00:00Z' },
+      { id:'c-beta', name:'Velo Logistics', industry:'Supply Chain & Freight', logo:'🚚', website:'https://velologistics.io', contact_name:'Sophia Martinez', phone:'+1 (555) 902-1845', email:'smartinez@velologistics.io', revenue:12000000, goal:15000000, employees:450, current_crm:'HubSpot', current_website:'Webflow', marketing_channels:'Trade shows, Cold Outbound', sales_process:'Ops audit → automation proposal → pilot → rollout', assigned_strategist:'u-admin', tags:'Logistics, Automated', notes:'Deploying dispatch tools and carrier email automation.', status:'ACTIVE', lifecycle_stage:'Onboarding', contract_value:240000, renewal_date:'2026-11-22', maturity_breakdown:{'Marketing':45,'Sales':55,'Operations':60,'Technology':58,'Customer Experience':50,'Data':40,'Finance':62,'Leadership':57}, created_at:'2025-10-15T00:00:00Z' },
+      { id:'c-gamma', name:'Pulse Fitness', industry:'Gym Franchise & Wellness', logo:'⚡', website:'https://pulsewellness.com', contact_name:'Brett Harper', phone:'+1 (555) 124-7890', email:'bharper@pulsewellness.com', revenue:1800000, goal:2500000, employees:60, current_crm:'None (Spreadsheets)', current_website:'Custom HTML', marketing_channels:'Instagram, TikTok, Referral', sales_process:'Discovery → content audit → proposal', assigned_strategist:'u-staff', tags:'Media Engine, B2C', notes:'Short-form video strategy and mobile membership app.', status:'ONBOARDING', lifecycle_stage:'Onboarding', contract_value:95000, renewal_date:'2026-08-30', maturity_breakdown:{'Marketing':58,'Sales':40,'Operations':35,'Technology':30,'Customer Experience':48,'Data':25,'Finance':38,'Leadership':42}, created_at:'2026-02-20T00:00:00Z' }
     ],
     leads: [
-      { id:'l-1', company:'Nimbus Retail Group', contact_name:'Kara Lin', email:'kara@nimbusretail.com', phone:'+1 (555) 210-4477', status:'Proposal', value:120000, probability:65, source:'Referral', created_by:'u-staff', created_at:'2026-06-01T00:00:00Z' },
-      { id:'l-2', company:'Brightline Dental Group', contact_name:'Dr. Omar Reyes', email:'oreyes@brightlinedental.com', phone:'+1 (555) 664-9021', status:'Discovery', value:60000, probability:30, source:'LinkedIn', created_by:'u-staff', created_at:'2026-06-10T00:00:00Z' },
-      { id:'l-3', company:'Fjord Outdoor Co.', contact_name:'Ingrid Solberg', email:'ingrid@fjordoutdoor.com', phone:'+1 (555) 337-8820', status:'Negotiation', value:210000, probability:80, source:'Cold Outbound', created_by:'u-staff', created_at:'2026-05-22T00:00:00Z' },
-      { id:'l-4', company:'Cascade Legal Partners', contact_name:'Marcus Webb', email:'mwebb@cascadelegal.com', phone:'+1 (555) 774-1290', status:'Won', value:95000, probability:100, source:'Referral', created_by:'u-staff', created_at:'2026-04-14T00:00:00Z' },
-      { id:'l-5', company:'Solace Home Care', contact_name:'Denise Faro', email:'dfaro@solacehomecare.com', phone:'+1 (555) 552-6633', status:'Audit', value:45000, probability:45, source:'Google Ads', created_by:'u-staff', created_at:'2026-06-18T00:00:00Z' },
-      { id:'l-6', company:'Ridgeview Realty', contact_name:'Tom Ashford', email:'tashford@ridgeviewrealty.com', phone:'+1 (555) 908-3345', status:'Lost', value:30000, probability:0, source:'Referral', created_by:'u-staff', created_at:'2026-03-02T00:00:00Z' }
+      { id:'l-1', company:'Nimbus Retail Group', contact_name:'Kara Lin', email:'kara@nimbusretail.com', phone:'+1 (555) 210-4477', status:'Proposal', value:120000, probability:65, source:'Referral', competitor:'HubSpot Agency Partner', reason_lost:'', close_date:null, created_by:'u-staff', created_at:'2026-06-01T00:00:00Z' },
+      { id:'l-2', company:'Brightline Dental Group', contact_name:'Dr. Omar Reyes', email:'oreyes@brightlinedental.com', phone:'+1 (555) 664-9021', status:'Discovery', value:60000, probability:30, source:'LinkedIn', competitor:'', reason_lost:'', close_date:null, created_by:'u-staff', created_at:'2026-06-10T00:00:00Z' },
+      { id:'l-3', company:'Fjord Outdoor Co.', contact_name:'Ingrid Solberg', email:'ingrid@fjordoutdoor.com', phone:'+1 (555) 337-8820', status:'Negotiation', value:210000, probability:80, source:'Cold Outbound', competitor:'In-house team', reason_lost:'', close_date:null, created_by:'u-staff', created_at:'2026-05-22T00:00:00Z' },
+      { id:'l-4', company:'Cascade Legal Partners', contact_name:'Marcus Webb', email:'mwebb@cascadelegal.com', phone:'+1 (555) 774-1290', status:'Won', value:95000, probability:100, source:'Referral', competitor:'', reason_lost:'', close_date:'2026-04-30', created_by:'u-staff', created_at:'2026-04-14T00:00:00Z' },
+      { id:'l-5', company:'Solace Home Care', contact_name:'Denise Faro', email:'dfaro@solacehomecare.com', phone:'+1 (555) 552-6633', status:'Audit', value:45000, probability:45, source:'Google Ads', competitor:'', reason_lost:'', close_date:null, created_by:'u-staff', created_at:'2026-06-18T00:00:00Z' },
+      { id:'l-6', company:'Ridgeview Realty', contact_name:'Tom Ashford', email:'tashford@ridgeviewrealty.com', phone:'+1 (555) 908-3345', status:'Lost', value:30000, probability:0, source:'Referral', competitor:'Local freelancer', reason_lost:'Chose a lower-cost freelancer', close_date:'2026-03-10', created_by:'u-staff', created_at:'2026-03-02T00:00:00Z' },
+      { id:'l-7', company:'Harborview Dental', contact_name:'Dr. Amy Chen', email:'achen@harborviewdental.com', phone:'+1 (555) 441-2290', status:'Lead', value:25000, probability:15, source:'Website', competitor:'', reason_lost:'', close_date:null, created_by:'u-staff', created_at:'2026-06-25T00:00:00Z' }
     ],
     projects: [
-      { id:'p-1', client_id:'c-alpha', name:'HIPAA-Ready Client Portal Rebuild', description:'React rebuild of the patient/staff portal with SOC2-aligned data handling.', division:'Ascend Software', status:'ACTIVE', progress:68, budget:120000, deadline:'2026-09-01', created_at:'2026-02-01T00:00:00Z' },
-      { id:'p-2', client_id:'c-beta', name:'Dispatch Automation Suite', description:'Carrier webhook listeners and automated routing rules.', division:'Ascend Systems', status:'ACTIVE', progress:42, budget:95000, deadline:'2026-10-15', created_at:'2026-03-10T00:00:00Z' },
-      { id:'p-3', client_id:'c-gamma', name:'Membership Mobile App', description:'Booking, leaderboard, and check-in flows for gym members.', division:'Ascend Software', status:'ACTIVE', progress:25, budget:80000, deadline:'2026-12-01', created_at:'2026-05-01T00:00:00Z' },
-      { id:'p-4', client_id:'c-alpha', name:'Internal QA Dashboard', description:'Internal tool tracking customer logs and portal bugs.', division:'Ascend Software', status:'COMPLETED', progress:100, budget:25000, deadline:'2026-05-30', created_at:'2026-01-20T00:00:00Z' }
+      { id:'p-1', client_id:'c-alpha', name:'HIPAA-Ready Client Portal Rebuild', description:'React rebuild of the patient/staff portal with SOC2-aligned data handling.', division:'Ascend Software', status:'ACTIVE', progress:68, budget:120000, deadline:'2026-09-01', users_count:1840, sessions:9200, conversion_rate:4.2, uptime:99.95, bugs_open:3, created_at:'2026-02-01T00:00:00Z' },
+      { id:'p-2', client_id:'c-beta', name:'Dispatch Automation Suite', description:'Carrier webhook listeners and automated routing rules.', division:'Ascend Systems', status:'ACTIVE', progress:42, budget:95000, deadline:'2026-10-15', users_count:0, sessions:0, conversion_rate:0, uptime:99.9, bugs_open:0, created_at:'2026-03-10T00:00:00Z' },
+      { id:'p-3', client_id:'c-gamma', name:'Membership Mobile App', description:'Booking, leaderboard, and check-in flows for gym members.', division:'Ascend Software', status:'ACTIVE', progress:25, budget:80000, deadline:'2026-12-01', users_count:410, sessions:2100, conversion_rate:6.8, uptime:99.6, bugs_open:7, created_at:'2026-05-01T00:00:00Z' },
+      { id:'p-4', client_id:'c-alpha', name:'Internal QA Dashboard', description:'Internal tool tracking customer logs and portal bugs.', division:'Ascend Software', status:'COMPLETED', progress:100, budget:25000, deadline:'2026-05-30', users_count:22, sessions:640, conversion_rate:0, uptime:99.98, bugs_open:0, created_at:'2026-01-20T00:00:00Z' }
     ],
     tasks: [
-      { id:'t-1', project_id:'p-1', client_id:'c-alpha', title:'HIPAA verification protocols in API endpoints', description:'Encrypt attributes to conform to SOC2/HIPAA policies.', status:'IN_PROGRESS', priority:'Urgent', due_date:'2026-07-05', assigned_to:'u-admin', created_at:'2026-06-01T00:00:00Z' },
-      { id:'t-2', project_id:'p-1', client_id:'c-alpha', title:'Figma mockups review for billing cards', description:'Confirm layout changes with Dr. Gregory Vance.', status:'REVIEW', priority:'Medium', due_date:'2026-07-02', assigned_to:'u-admin', created_at:'2026-06-05T00:00:00Z' },
-      { id:'t-3', project_id:'p-2', client_id:'c-beta', title:'Carrier webhook listener setup', description:'Listen for freight triggers, process parsing.', status:'TODO', priority:'High', due_date:'2026-07-10', assigned_to:'u-admin', created_at:'2026-06-08T00:00:00Z' },
-      { id:'t-4', project_id:'p-3', client_id:'c-gamma', title:'Weekly shoot video guidelines', description:'Write down short-form script parameters.', status:'DONE', priority:'Low', due_date:'2026-06-28', assigned_to:'u-admin', created_at:'2026-06-01T00:00:00Z' },
-      { id:'t-5', project_id:'p-1', client_id:'c-alpha', title:'Daily metrics compilation automation', description:'Compute reach/impressions, post to DB.', status:'TODO', priority:'Medium', due_date:'2026-07-12', assigned_to:'u-admin', created_at:'2026-06-12T00:00:00Z' }
+      { id:'t-1', project_id:'p-1', client_id:'c-alpha', title:'HIPAA verification protocols in API endpoints', description:'Encrypt attributes to conform to SOC2/HIPAA policies.', status:'IN_PROGRESS', priority:'Urgent', due_date:'2026-07-05', assigned_to:'u-admin', recurring:'None', subtasks:[{title:'Audit endpoint list',done:true},{title:'Encrypt PII fields',done:false}], created_at:'2026-06-01T00:00:00Z' },
+      { id:'t-2', project_id:'p-1', client_id:'c-alpha', title:'Figma mockups review for billing cards', description:'Confirm layout changes with Dr. Gregory Vance.', status:'REVIEW', priority:'Medium', due_date:'2026-07-04', assigned_to:'u-admin', recurring:'None', subtasks:[], created_at:'2026-06-05T00:00:00Z' },
+      { id:'t-3', project_id:'p-2', client_id:'c-beta', title:'Carrier webhook listener setup', description:'Listen for freight triggers, process parsing.', status:'TODO', priority:'High', due_date:'2026-07-10', assigned_to:'u-admin', recurring:'None', subtasks:[], created_at:'2026-06-08T00:00:00Z' },
+      { id:'t-4', project_id:'p-3', client_id:'c-gamma', title:'Weekly shoot video guidelines', description:'Write down short-form script parameters.', status:'DONE', priority:'Low', due_date:'2026-06-28', assigned_to:'u-staff', recurring:'Weekly', subtasks:[], created_at:'2026-06-01T00:00:00Z' },
+      { id:'t-5', project_id:'p-1', client_id:'c-alpha', title:'Daily metrics compilation automation', description:'Compute reach/impressions, post to DB.', status:'TODO', priority:'Medium', due_date:'2026-07-12', assigned_to:'u-admin', recurring:'Daily', subtasks:[], created_at:'2026-06-12T00:00:00Z' },
+      { id:'t-6', project_id:null, client_id:'c-beta', title:'Send Velo Logistics onboarding follow-up', description:'Check in on dispatch automation rollout progress.', status:'TODO', priority:'Medium', due_date:'2026-07-01', assigned_to:'u-staff', recurring:'None', subtasks:[], created_at:'2026-06-25T00:00:00Z' },
+      { id:'t-7', project_id:'p-3', client_id:'c-gamma', title:'Review membership app QA checklist', description:'Final pass before beta release.', status:'IN_PROGRESS', priority:'High', due_date:'2026-06-30', assigned_to:'u-ceo', recurring:'None', subtasks:[{title:'Test booking flow',done:true},{title:'Test payment flow',done:true},{title:'Test push notifications',done:false}], created_at:'2026-06-20T00:00:00Z' }
+    ],
+    meetings: [
+      { id:'m-1', client_id:'c-alpha', title:'Portal Rebuild — Sprint Review', date:'2026-07-04', time:'10:00', attendees:'Dr. Gregory Vance, Priya Anand', notes:'Walk through billing card redesign.', status:'Scheduled', created_at:'2026-06-25T00:00:00Z' },
+      { id:'m-2', client_id:'c-beta', title:'Dispatch Automation Check-in', date:'2026-07-08', time:'14:00', attendees:'Sophia Martinez, Jordan Sparks', notes:'', status:'Scheduled', created_at:'2026-06-26T00:00:00Z' },
+      { id:'m-3', client_id:'c-gamma', title:'Content Calendar Planning', date:'2026-06-29', time:'11:00', attendees:'Brett Harper, Jordan Sparks', notes:'Plan July content batch.', status:'Completed', created_at:'2026-06-15T00:00:00Z' }
     ],
     finance: [
-      { id:'f-1', client_id:'c-alpha', description:'Enterprise Monthly Retainer', type:'REVENUE', amount:15000, division:'Ascend Software', status:'Paid', date:'2026-06-01', created_at:'2026-06-01T00:00:00Z' },
-      { id:'f-2', client_id:'c-alpha', description:'Portal Rebuild — Milestone 2', type:'REVENUE', amount:30000, division:'Ascend Software', status:'Paid', date:'2026-06-15', created_at:'2026-06-15T00:00:00Z' },
-      { id:'f-3', client_id:'c-beta', description:'Automation Suite Retainer', type:'REVENUE', amount:20000, division:'Ascend Systems', status:'Paid', date:'2026-06-01', created_at:'2026-06-01T00:00:00Z' },
-      { id:'f-4', client_id:'c-gamma', description:'Onboarding & Media Retainer', type:'REVENUE', amount:8000, division:'Ascend Media', status:'Outstanding', date:'2026-06-01', created_at:'2026-06-01T00:00:00Z' },
-      { id:'f-5', client_id:null, description:'Cloud Hosting — Sandbox Servers', type:'EXPENSE', amount:3400, division:'Ascend Software', status:'Paid', date:'2026-06-05', created_at:'2026-06-05T00:00:00Z' },
-      { id:'f-6', client_id:null, description:'Stock Media Subscriptions', type:'EXPENSE', amount:850, division:'Ascend Media', status:'Paid', date:'2026-06-12', created_at:'2026-06-12T00:00:00Z' },
-      { id:'f-7', client_id:'c-beta', description:'Dispatch Build — Milestone 2', type:'REVENUE', amount:45000, division:'Ascend Systems', status:'Forecast', date:'2026-07-15', created_at:'2026-06-20T00:00:00Z' }
+      { id:'f-1', client_id:'c-alpha', project_id:null, description:'Enterprise Monthly Retainer', type:'REVENUE', amount:15000, division:'Ascend Software', payment_type:'Monthly', status:'Paid', date:'2026-06-01', created_at:'2026-06-01T00:00:00Z' },
+      { id:'f-2', client_id:'c-alpha', project_id:'p-1', description:'Portal Rebuild — Milestone 2', type:'REVENUE', amount:30000, division:'Ascend Software', payment_type:'One-Time', status:'Paid', date:'2026-06-15', created_at:'2026-06-15T00:00:00Z' },
+      { id:'f-3', client_id:'c-beta', project_id:null, description:'Automation Suite Retainer', type:'REVENUE', amount:20000, division:'Ascend Systems', payment_type:'Monthly', status:'Paid', date:'2026-06-01', created_at:'2026-06-01T00:00:00Z' },
+      { id:'f-4', client_id:'c-gamma', project_id:null, description:'Onboarding & Media Retainer', type:'REVENUE', amount:8000, division:'Ascend Media', payment_type:'Monthly', status:'Outstanding', date:'2026-06-01', created_at:'2026-06-01T00:00:00Z' },
+      { id:'f-5', client_id:null, project_id:null, description:'Cloud Hosting — Sandbox Servers', type:'EXPENSE', amount:3400, division:'Ascend Software', payment_type:'Monthly', status:'Paid', date:'2026-06-05', created_at:'2026-06-05T00:00:00Z' },
+      { id:'f-6', client_id:null, project_id:null, description:'Stock Media Subscriptions', type:'EXPENSE', amount:850, division:'Ascend Media', payment_type:'Monthly', status:'Paid', date:'2026-06-12', created_at:'2026-06-12T00:00:00Z' },
+      { id:'f-7', client_id:'c-beta', project_id:'p-2', description:'Dispatch Build — Milestone 2', type:'REVENUE', amount:45000, division:'Ascend Systems', payment_type:'One-Time', status:'Forecast', date:'2026-07-15', created_at:'2026-06-20T00:00:00Z' },
+      { id:'f-8', client_id:'c-alpha', project_id:null, description:'Enterprise Monthly Retainer', type:'REVENUE', amount:15000, division:'Ascend Software', payment_type:'Monthly', status:'Paid', date:'2026-05-01', created_at:'2026-05-01T00:00:00Z' },
+      { id:'f-9', client_id:'c-beta', project_id:null, description:'Automation Suite Retainer', type:'REVENUE', amount:18000, division:'Ascend Systems', payment_type:'Monthly', status:'Paid', date:'2026-05-01', created_at:'2026-05-01T00:00:00Z' },
+      { id:'f-10', client_id:'c-alpha', project_id:null, description:'Enterprise Monthly Retainer', type:'REVENUE', amount:12000, division:'Ascend Software', payment_type:'Monthly', status:'Paid', date:'2026-04-01', created_at:'2026-04-01T00:00:00Z' },
+      { id:'f-11', client_id:'c-beta', project_id:null, description:'Automation Suite Retainer', type:'REVENUE', amount:18000, division:'Ascend Systems', payment_type:'Monthly', status:'Paid', date:'2026-04-01', created_at:'2026-04-01T00:00:00Z' },
+      { id:'f-12', client_id:'c-alpha', project_id:null, description:'Enterprise Monthly Retainer', type:'REVENUE', amount:12000, division:'Ascend Software', payment_type:'Monthly', status:'Paid', date:'2026-03-01', created_at:'2026-03-01T00:00:00Z' },
+      { id:'f-13', client_id:'c-alpha', project_id:null, description:'Enterprise Monthly Retainer', type:'REVENUE', amount:10000, division:'Ascend Software', payment_type:'Monthly', status:'Paid', date:'2026-02-01', created_at:'2026-02-01T00:00:00Z' },
+      { id:'f-14', client_id:'c-alpha', project_id:null, description:'Enterprise Monthly Retainer', type:'REVENUE', amount:10000, division:'Ascend Software', payment_type:'Monthly', status:'Paid', date:'2026-01-01', created_at:'2026-01-01T00:00:00Z' }
+    ],
+    content_items: [
+      { id:'ci-1', client_id:'c-gamma', title:'5 Signs Your Gym Needs a Booking App', content_type:'Video', platform:'Instagram Reels', status:'Published', scheduled_date:'2026-06-10', reach:18400, impressions:24200, views:15600, watch_time_secs:420000, likes:980, comments:64, shares:112, saves:340, followers_gained:210, website_clicks:540, leads_generated:22, revenue_generated:8500, created_at:'2026-06-10T00:00:00Z' },
+      { id:'ci-2', client_id:'c-gamma', title:'Member Transformation Spotlight', content_type:'Video', platform:'TikTok', status:'Approved', scheduled_date:'2026-07-08', reach:0, impressions:0, views:0, watch_time_secs:0, likes:0, comments:0, shares:0, saves:0, followers_gained:0, website_clicks:0, leads_generated:0, revenue_generated:0, created_at:'2026-06-25T00:00:00Z' },
+      { id:'ci-3', client_id:'c-alpha', title:'Patient Portal Security Explainer', content_type:'Article', platform:'LinkedIn', status:'Filmed', scheduled_date:'2026-07-12', reach:0, impressions:0, views:0, watch_time_secs:0, likes:0, comments:0, shares:0, saves:0, followers_gained:0, website_clicks:0, leads_generated:0, revenue_generated:0, created_at:'2026-06-28T00:00:00Z' },
+      { id:'ci-4', client_id:'c-gamma', title:'New Class Schedule Announcement', content_type:'Post', platform:'Instagram', status:'Planned', scheduled_date:'2026-07-15', reach:0, impressions:0, views:0, watch_time_secs:0, likes:0, comments:0, shares:0, saves:0, followers_gained:0, website_clicks:0, leads_generated:0, revenue_generated:0, created_at:'2026-06-30T00:00:00Z' }
+    ],
+    automations: [
+      { id:'au-1', client_id:'c-beta', name:'Carrier Follow-Up Email Sequence', description:'Auto-emails carriers 24h after quote request.', status:'Active', success_rate:97.5, hours_saved:38, tasks_automated:640, failed_runs:4, created_at:'2026-04-01T00:00:00Z' },
+      { id:'au-2', client_id:'c-alpha', name:'Appointment Reminder SMS', description:'Sends SMS reminders 48h and 2h before appointments.', status:'Active', success_rate:99.1, hours_saved:22, tasks_automated:1120, failed_runs:2, created_at:'2026-02-15T00:00:00Z' },
+      { id:'au-3', client_id:'c-gamma', name:'Lead-to-CRM Sync', description:'Pushes Instagram/TikTok leads into the CRM automatically.', status:'Draft', success_rate:0, hours_saved:0, tasks_automated:0, failed_runs:0, created_at:'2026-06-20T00:00:00Z' }
+    ],
+    sops: [
+      { id:'sop-1', title:'Client Onboarding Checklist', department:'Ascend Systems', owner:'u-admin', version:'v2.1', status:'Approved', approval_date:'2026-03-01', review_date:'2026-09-01', downloads:34, file_url:'', created_at:'2026-02-15T00:00:00Z' },
+      { id:'sop-2', title:'Monthly Content Approval Workflow', department:'Ascend Media', owner:'u-staff', version:'v1.4', status:'Approved', approval_date:'2026-04-10', review_date:'2026-10-10', downloads:19, file_url:'', created_at:'2026-04-01T00:00:00Z' },
+      { id:'sop-3', title:'Incident Response for Client Portals', department:'Ascend Software', owner:'u-admin', version:'v1.0', status:'In Review', approval_date:null, review_date:null, downloads:3, file_url:'', created_at:'2026-06-20T00:00:00Z' }
     ]
   };
 }
+
 
 function loadLocalDB(){
   let raw = localStorage.getItem('AF_LOCAL_DB');
@@ -444,15 +502,25 @@ const NAV_ITEMS = [
   { tab:'dashboard', label:'Dashboard', icon:'layout-dashboard', roles:['CEO','ADMIN','STAFF'] },
   { tab:'portal', label:'My Portal', icon:'layout-dashboard', roles:['CLIENT'] },
   { tab:'clients', label:'Clients', icon:'building-2', roles:['CEO','ADMIN'] },
-  { tab:'leads', label:'Leads & Pipeline', icon:'users', roles:['CEO','ADMIN','STAFF'] },
+  { tab:'leads', label:'Leads', icon:'users', roles:['CEO','ADMIN','STAFF'] },
+  { tab:'pipeline', label:'Sales Pipeline', icon:'git-branch', roles:['CEO','ADMIN','STAFF'] },
   { tab:'projects', label:'Projects', icon:'folder-kanban', roles:['CEO','ADMIN'] },
+  { tab:'tasks', label:'Tasks', icon:'check-square', roles:['CEO','ADMIN'] },
+  { tab:'calendar', label:'Calendar', icon:'calendar', roles:['CEO','ADMIN'] },
+  { tab:'media', label:'Ascend Media', icon:'video', roles:['CEO','ADMIN'] },
+  { tab:'systems', label:'Ascend Systems', icon:'workflow', roles:['CEO','ADMIN'] },
+  { tab:'software', label:'Ascend Software', icon:'code-2', roles:['CEO','ADMIN'] },
   { tab:'finance', label:'Finance', icon:'credit-card', roles:['CEO','ADMIN'] },
   { tab:'team', label:'Team & Access', icon:'shield-check', roles:['CEO','ADMIN'] },
+  { tab:'reports', label:'Reports', icon:'file-bar-chart', roles:['CEO','ADMIN'] },
   { tab:'settings', label:'Settings', icon:'settings', roles:['CEO','ADMIN'] },
 ];
 const RENDERERS = {
   dashboard: renderDashboard, portal: renderClientPortal, clients: renderClients,
-  leads: renderLeads, projects: renderProjects, finance: renderFinance, team: renderTeam, settings: renderSettings
+  leads: renderLeads, pipeline: renderSalesPipeline, projects: renderProjects,
+  tasks: renderTasks, calendar: renderCalendar,
+  media: renderMedia, systems: renderSystems, software: renderSoftware,
+  finance: renderFinance, team: renderTeam, reports: renderReports, settings: renderSettings
 };
 
 function defaultTabForRole(role){ return role === 'CLIENT' ? 'portal' : 'dashboard'; }
@@ -502,6 +570,8 @@ function openModal(title, bodyHtml){
 function closeModal(){ $('#modal').classList.add('hidden'); $('#modal-body').innerHTML = ''; }
 $('#modal-close').addEventListener('click', closeModal);
 $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+$('#detail-modal-close').addEventListener('click', closeDetailModal);
+$('#detail-modal').addEventListener('click', (e) => { if (e.target.id === 'detail-modal') closeDetailModal(); });
 
 /* ============================================================================
    SHARED HELPERS
@@ -514,21 +584,206 @@ async function getClientMap(){
 }
 function healthColor(score){
   if (score >= 80) return 'text-ascendGreen';
-  if (score >= 65) return 'text-amber-500';
-  if (score >= 50) return 'text-orange-500';
+  if (score >= 60) return 'text-amber-500';
+  if (score >= 40) return 'text-orange-500';
   return 'text-ascendRed';
 }
 function statusPill(status){
   const styles = {
     ACTIVE:'bg-emerald-500/10 text-emerald-600', ONBOARDING:'bg-amber-500/10 text-amber-600', SUSPENDED:'bg-rose-500/10 text-rose-600',
-    Discovery:'bg-slate-500/10 text-slate-500', Audit:'bg-indigo-500/10 text-indigo-500', Proposal:'bg-blue-500/10 text-blue-500',
+    Lead:'bg-slate-500/10 text-slate-500', Discovery:'bg-slate-500/10 text-slate-500', Audit:'bg-indigo-500/10 text-indigo-500', Proposal:'bg-blue-500/10 text-blue-500',
     Negotiation:'bg-amber-500/10 text-amber-600', Won:'bg-emerald-500/10 text-emerald-600', Lost:'bg-rose-500/10 text-rose-500',
+    Onboarding:'bg-amber-500/10 text-amber-600', Growth:'bg-emerald-500/10 text-emerald-600', Renewal:'bg-blue-500/10 text-blue-500', Expansion:'bg-indigo-500/10 text-indigo-500',
     TODO:'bg-slate-500/10 text-slate-500', IN_PROGRESS:'bg-blue-500/10 text-blue-500', REVIEW:'bg-amber-500/10 text-amber-600', DONE:'bg-emerald-500/10 text-emerald-600',
     Paid:'bg-emerald-500/10 text-emerald-600', Outstanding:'bg-rose-500/10 text-rose-500', Forecast:'bg-slate-500/10 text-slate-500',
-    COMPLETED:'bg-emerald-500/10 text-emerald-600', ON_HOLD:'bg-amber-500/10 text-amber-600'
+    COMPLETED:'bg-emerald-500/10 text-emerald-600', ON_HOLD:'bg-amber-500/10 text-amber-600',
+    Planned:'bg-slate-500/10 text-slate-500', Filmed:'bg-indigo-500/10 text-indigo-500', Edited:'bg-blue-500/10 text-blue-500', Approved:'bg-amber-500/10 text-amber-600', Published:'bg-emerald-500/10 text-emerald-600',
+    Active:'bg-emerald-500/10 text-emerald-600', Inactive:'bg-rose-500/10 text-rose-500', Draft:'bg-slate-500/10 text-slate-500',
+    'In Review':'bg-amber-500/10 text-amber-600', 'Approved':'bg-emerald-500/10 text-emerald-600', 'Archived':'bg-slate-500/10 text-slate-500'
   };
   return `<span class="text-[10px] font-bold uppercase px-2 py-1 rounded-md ${styles[status]||'bg-slate-500/10 text-slate-500'}">${status.replace('_',' ')}</span>`;
 }
+
+const LIFECYCLE_STAGES = ['Onboarding','Growth','Renewal','Expansion'];
+const MATURITY_AXES = ['Marketing','Sales','Operations','Technology','Customer Experience','Data','Finance','Leadership'];
+
+/**
+ * Client Health Score (0-100): an automatic snapshot proxy, not a tracked
+ * historical metric. Built from what's actually in the CRM today — contract
+ * status, renewal proximity, average project progress, and outstanding
+ * invoices — since we don't yet capture CAC/LTV/website-traffic style data.
+ */
+function computeHealthScore(client, projects, finance){
+  let score = 55;
+  if (client.status === 'ACTIVE') score += 15;
+  else if (client.status === 'SUSPENDED') score -= 30;
+  else if (client.status === 'ONBOARDING') score += 0;
+  if (client.renewal_date){
+    const days = (new Date(client.renewal_date) - new Date()) / 86400000;
+    if (days < 0) score -= 20;
+    else if (days < 30) score -= 10;
+    else if (days > 180) score += 8;
+  }
+  const cProjects = projects.filter(p => p.client_id === client.id);
+  if (cProjects.length){
+    const avgProgress = cProjects.reduce((s,p)=>s+Number(p.progress||0),0) / cProjects.length;
+    score += Math.round((avgProgress - 50) / 5);
+    if (cProjects.some(p => p.status === 'ON_HOLD')) score -= 8;
+  }
+  const cFinance = finance.filter(f => f.client_id === client.id);
+  const outstanding = cFinance.filter(f => f.status === 'Outstanding').length;
+  score -= outstanding * 6;
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+function healthLabel(score){
+  if (score >= 80) return 'Green';
+  if (score >= 60) return 'Yellow';
+  if (score >= 40) return 'Orange';
+  return 'Red';
+}
+function emptyMaturityBreakdown(){
+  const obj = {}; MATURITY_AXES.forEach(a => obj[a] = 50); return obj;
+}
+
+/**
+ * Ascend Impact Score™ (0-100): a current-snapshot estimate of value
+ * delivered to a client across all three divisions. Like Health Score, this
+ * is computed live from what's tracked today, not a historical trend —
+ * there's no periodic snapshot job recording past values.
+ */
+function computeImpactScore(clientId, content, automations, projects){
+  const cContent = content.filter(c => c.client_id === clientId);
+  const cAuto = automations.filter(a => a.client_id === clientId);
+  const cProj = projects.filter(p => p.client_id === clientId && (p.division === 'Ascend Software' || p.division === 'All Divisions'));
+
+  const mediaLeads = cContent.reduce((s,c)=>s+Number(c.leads_generated||0),0);
+  const mediaRevenue = cContent.reduce((s,c)=>s+Number(c.revenue_generated||0),0);
+  const media = Math.max(0, Math.min(100, Math.round(mediaLeads*3 + mediaRevenue/500)));
+
+  const hoursSaved = cAuto.reduce((s,a)=>s+Number(a.hours_saved||0),0);
+  const avgSuccess = cAuto.length ? cAuto.reduce((s,a)=>s+Number(a.success_rate||0),0)/cAuto.length : 0;
+  const systems = Math.max(0, Math.min(100, Math.round(hoursSaved*1.5 + avgSuccess/2)));
+
+  const avgProgress = cProj.length ? cProj.reduce((s,p)=>s+Number(p.progress||0),0)/cProj.length : 0;
+  const avgUptime = cProj.length ? cProj.reduce((s,p)=>s+Number(p.uptime||0),0)/cProj.length : 0;
+  const software = Math.max(0, Math.min(100, Math.round(avgProgress*0.6 + avgUptime*0.4)));
+
+  const overall = Math.round((media+systems+software)/3);
+  return { media, systems, software, overall };
+}
+
+function openDetailModal(title, bodyHtml){
+  $('#detail-modal-title').textContent = title;
+  $('#detail-modal-body').innerHTML = bodyHtml;
+  $('#detail-modal').classList.remove('hidden');
+  lucide.createIcons();
+}
+function closeDetailModal(){ $('#detail-modal').classList.add('hidden'); $('#detail-modal-body').innerHTML = ''; }
+
+/* ============================================================================
+   NOTIFICATIONS
+============================================================================ */
+async function computeNotifications(){
+  const [tasks, projects, finance, leads, clients, meetings] = await Promise.all([
+    dbList('tasks'), dbList('projects'), dbList('finance'), dbList('leads'), dbList('clients'), dbList('meetings')
+  ]);
+  const now = new Date();
+  const notifs = [];
+  meetings.filter(m => m.status === 'Scheduled').forEach(m => {
+    const days = (new Date(m.date) - now) / 86400000;
+    if (days >= 0 && days <= 7) notifs.push({ icon:'calendar', text:`Meeting "${m.title}" on ${fmtDate(m.date)}`, tab:'calendar' });
+  });
+  tasks.filter(t => t.status !== 'DONE' && t.due_date).forEach(t => {
+    const days = (new Date(t.due_date) - now) / 86400000;
+    if (days < 0) notifs.push({ icon:'alert-triangle', text:`Overdue task: ${t.title}`, tab:'tasks' });
+    else if (days <= 3) notifs.push({ icon:'clock', text:`Task due soon: ${t.title}`, tab:'tasks' });
+  });
+  projects.filter(p => p.status === 'ACTIVE' && p.deadline && new Date(p.deadline) < now).forEach(p => {
+    notifs.push({ icon:'alert-triangle', text:`Project overdue: ${p.name}`, tab:'projects' });
+  });
+  finance.filter(f => f.status === 'Outstanding').forEach(f => {
+    notifs.push({ icon:'credit-card', text:`Outstanding invoice: ${f.description}`, tab:'finance' });
+  });
+  clients.forEach(c => {
+    const hs = computeHealthScore(c, projects, finance);
+    if (hs < 40) notifs.push({ icon:'heart-crack', text:`Low health score: ${c.name} (${hs})`, tab:'clients' });
+  });
+  leads.filter(l => (now - new Date(l.created_at)) / 86400000 <= 7).forEach(l => {
+    notifs.push({ icon:'user-plus', text:`New lead: ${l.company}`, tab:'leads' });
+  });
+  clients.filter(c => c.renewal_date).forEach(c => {
+    const days = (new Date(c.renewal_date) - now) / 86400000;
+    if (days >= 0 && days <= 30) notifs.push({ icon:'refresh-cw', text:`Renewal coming up: ${c.name} (${fmtDate(c.renewal_date)})`, tab:'clients' });
+  });
+  return notifs;
+}
+async function refreshNotifications(){
+  if (!['CEO','ADMIN','STAFF'].includes(currentUser.role)) return;
+  try {
+    const notifs = await computeNotifications();
+    $('#notif-dot').classList.toggle('hidden', notifs.length === 0);
+    $('#notif-panel').innerHTML = notifs.length ? `
+      <h4 class="font-heading font-bold text-xs uppercase tracking-wider text-slate-400 mb-2 px-1">Notifications</h4>
+      <div class="space-y-1">${notifs.map(n => `<button data-tab="${n.tab}" class="notif-item w-full text-left flex items-start gap-2 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
+        <i data-lucide="${n.icon}" class="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-ascendBlue"></i><span class="text-xs">${esc(n.text)}</span>
+      </button>`).join('')}</div>` : `<p class="text-xs text-slate-400 p-2">You're all caught up.</p>`;
+    lucide.createIcons();
+    $$('.notif-item').forEach(b => b.addEventListener('click', () => { $('#notif-panel').classList.add('hidden'); window.location.hash = '#'+b.dataset.tab; }));
+  } catch(e){ console.warn('Notifications failed to load', e); }
+}
+
+/* ============================================================================
+   GLOBAL SEARCH
+============================================================================ */
+async function performGlobalSearch(query){
+  const q = query.toLowerCase();
+  const [clients, leads, projects, tasks, meetings] = await Promise.all([
+    dbList('clients'), dbList('leads'), dbList('projects'), dbList('tasks'), dbList('meetings')
+  ]);
+  return {
+    Clients: clients.filter(c => c.name.toLowerCase().includes(q)).slice(0,5),
+    Leads: leads.filter(l => l.company.toLowerCase().includes(q)).slice(0,5),
+    Projects: projects.filter(p => p.name.toLowerCase().includes(q)).slice(0,5),
+    Tasks: tasks.filter(t => t.title.toLowerCase().includes(q)).slice(0,5),
+    Meetings: meetings.filter(m => m.title.toLowerCase().includes(q)).slice(0,5),
+  };
+}
+let searchDebounce = null;
+function wireGlobalSearch(){
+  const input = $('#global-search-input');
+  const results = $('#global-search-results');
+  input.addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    const q = input.value.trim();
+    if (q.length < 2){ results.classList.add('hidden'); results.innerHTML=''; return; }
+    searchDebounce = setTimeout(async () => {
+      const grouped = await performGlobalSearch(q);
+      const entries = Object.entries(grouped).filter(([,items]) => items.length);
+      results.innerHTML = entries.length ? entries.map(([label, items]) => `
+        <div class="mb-1">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2">${label}</span>
+          ${items.map(item => `<button class="search-result-item w-full text-left px-2 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-sm" data-type="${label}" data-id="${item.id}">${esc(item.name||item.company||item.title)}</button>`).join('')}
+        </div>`).join('') : `<p class="text-xs text-slate-400 p-2">No results for "${esc(q)}".</p>`;
+      results.classList.remove('hidden');
+      $$('.search-result-item').forEach(b => b.addEventListener('click', async () => {
+        results.classList.add('hidden'); input.value = '';
+        const tabByType = { Clients:'clients', Leads:'leads', Projects:'projects', Tasks:'tasks', Meetings:'calendar' };
+        window.location.hash = '#' + tabByType[b.dataset.type];
+        if (b.dataset.type === 'Clients'){
+          setTimeout(async () => {
+            const clients = await dbList('clients');
+            const c = clients.find(cl => cl.id === b.dataset.id);
+            if (c) openClientDetail(c);
+          }, 200);
+        }
+      }));
+    }, 250);
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#global-search-wrap')) results.classList.add('hidden');
+  });
+}
+
 
 function monthKey(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 
@@ -596,7 +851,7 @@ async function generateFullReportPDF(opts={}){
       </div>
       <div class="premium-card p-5 mb-6">
         <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Client Health</h3>
-        <div class="space-y-3">${clients.map(c => `<div><div class="flex justify-between text-xs font-semibold mb-1"><span>${esc(c.name)}</span><span>${c.maturity_score||50}</span></div><div class="progress-track"><div class="progress-fill" style="width:${c.maturity_score||50}%"></div></div></div>`).join('') || '<p class="text-sm text-slate-400">No clients yet.</p>'}</div>
+        <div class="space-y-3">${clients.map(c => { const hs = computeHealthScore(c, projects, finance); return `<div><div class="flex justify-between text-xs font-semibold mb-1"><span>${esc(c.name)}</span><span>${hs} · ${healthLabel(hs)}</span></div><div class="progress-track"><div class="progress-fill" style="width:${hs}%"></div></div></div>`; }).join('') || '<p class="text-sm text-slate-400">No clients yet.</p>'}</div>
       </div>
       <div class="premium-card p-5">
         <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Recent Leads</h3>
@@ -607,10 +862,10 @@ async function generateFullReportPDF(opts={}){
     const clientsHtml = `${reportHeader('Clients', reportDate)}
       <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:#E2E8F0">
         <th class="py-2">Company</th><th>Industry</th><th>Status</th><th>Contract</th><th>Renewal</th><th>Health</th><th>Contact</th></tr></thead>
-      <tbody>${clients.map(c => `<tr class="border-b" style="border-color:#E2E8F0">
+      <tbody>${clients.map(c => { const hs = computeHealthScore(c, projects, finance); return `<tr class="border-b" style="border-color:#E2E8F0">
         <td class="py-2 font-semibold">${esc(c.name)}</td><td class="text-slate-400">${esc(c.industry||'—')}</td><td>${statusPill(c.status)}</td>
         <td class="font-bold">${fmtMoney(c.contract_value)}</td><td class="text-slate-400">${fmtDate(c.renewal_date)}</td>
-        <td class="font-bold">${c.maturity_score||50}</td><td class="text-slate-400">${esc(c.contact_name||'—')}</td></tr>`).join('') || '<tr><td colspan="7" class="p-4 text-center text-slate-400">No clients yet.</td></tr>'}</tbody></table>`;
+        <td class="font-bold">${hs}</td><td class="text-slate-400">${esc(c.contact_name||'—')}</td></tr>`; }).join('') || '<tr><td colspan="7" class="p-4 text-center text-slate-400">No clients yet.</td></tr>'}</tbody></table>`;
 
     const leadsHtml = `${reportHeader('Leads & Pipeline', reportDate)}
       ${LEAD_STAGES.map(stage => {
@@ -692,6 +947,18 @@ function isInMonth(dateStr, range){
   const d = new Date(dateStr);
   return d >= range.start && d < range.end;
 }
+function getLastNMonths(n){
+  const arr = []; const now = new Date();
+  for (let i = n-1; i >= 0; i--) arr.push(new Date(now.getFullYear(), now.getMonth()-i, 1));
+  return arr;
+}
+function monthLabel(d){ return d.toLocaleDateString('en-US', { month:'short', year:'2-digit' }); }
+function isInGivenMonth(dateStr, monthDate){
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  return d.getFullYear() === monthDate.getFullYear() && d.getMonth() === monthDate.getMonth();
+}
+function fmtPct(n){ const sign = n > 0 ? '+' : ''; return `${sign}${n.toFixed(1)}%`; }
 
 async function renderDashboard(root){
   const role = currentUser.role;
@@ -725,14 +992,31 @@ async function renderDashboard(root){
   }
 
   // CEO / ADMIN
+  const projects = await dbList('projects');
   const revenue = finance.filter(f=>f.type==='REVENUE' && f.status==='Paid');
   const expenses = finance.filter(f=>f.type==='EXPENSE');
   const totalRevenue = revenue.reduce((s,f)=>s+Number(f.amount||0),0);
   const monthRange = getMonthRange();
-  const monthlyRevenue = revenue.filter(f=>isInMonth(f.date, monthRange)).reduce((s,f)=>s+Number(f.amount||0),0);
   const monthlyExpenses = expenses.filter(f=>isInMonth(f.date, monthRange)).reduce((s,f)=>s+Number(f.amount||0),0);
   const openLeadsVal = leads.filter(l=>!['Won','Lost'].includes(l.status)).reduce((s,l)=>s+Number(l.value||0),0);
   const overdue = tasks.filter(t=>t.status!=='DONE' && t.due_date && new Date(t.due_date) < new Date()).length;
+
+  const monthsWindow = getLastNMonths(6);
+  const seriesRevenue = monthsWindow.map(d => revenue.filter(f=>isInGivenMonth(f.date,d)).reduce((s,f)=>s+Number(f.amount||0),0));
+  const seriesExpense = monthsWindow.map(d => expenses.filter(f=>isInGivenMonth(f.date,d)).reduce((s,f)=>s+Number(f.amount||0),0));
+  const seriesLabels = monthsWindow.map(monthLabel);
+  const currentMonthRevenue = seriesRevenue[seriesRevenue.length-1] || 0;
+  const prevMonthRevenue = seriesRevenue[seriesRevenue.length-2] || 0;
+  const growthRate = prevMonthRevenue ? ((currentMonthRevenue-prevMonthRevenue)/prevMonthRevenue*100) : 0;
+  const mrr = revenue.filter(f=>f.payment_type==='Monthly' && isInMonth(f.date, monthRange)).reduce((s,f)=>s+Number(f.amount||0),0);
+  const arr = mrr*12;
+  const suspended = clients.filter(c=>c.status==='SUSPENDED').length;
+  const churnRate = clients.length ? (suspended/clients.length*100) : 0;
+  const retention = 100 - churnRate;
+  const last3 = seriesRevenue.slice(-3).filter((_,i,arr)=>true);
+  const forecast = last3.length ? last3.reduce((a,b)=>a+b,0)/last3.length : 0;
+  const [contentAll, automationsAll] = await Promise.all([dbList('content_items'), dbList('automations')]);
+  const avgImpact = clients.length ? Math.round(clients.reduce((s,c)=>s+computeImpactScore(c.id, contentAll, automationsAll, projects).overall,0)/clients.length) : 0;
 
   root.innerHTML = `
     <div class="view-fade-in space-y-6">
@@ -740,44 +1024,57 @@ async function renderDashboard(root){
         <button id="dl-dashboard-pdf" class="gen-report-btn btn-ghost flex items-center gap-1.5"><i data-lucide="download" class="w-3.5 h-3.5"></i>Download Full Report (PDF)</button>
       </div>
       <div id="dashboard-capture" class="space-y-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        ${kpi('Total Revenue (Paid)', fmtMoney(totalRevenue), 'dollar-sign')}
-        ${kpi('Monthly Revenue', fmtMoney(monthlyRevenue), 'trending-up')}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        ${kpi('MRR', fmtMoney(mrr), 'repeat')}
+        ${kpi('ARR', fmtMoney(arr), 'calendar-days')}
+        ${kpi('Growth Rate (MoM)', fmtPct(growthRate), growthRate>=0?'trending-up':'trending-down')}
+        ${kpi('Revenue Forecast (Next Mo.)', fmtMoney(forecast), 'wand-2')}
         ${kpi('Monthly Expenses', fmtMoney(monthlyExpenses), 'trending-down')}
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+        ${kpi('Total Revenue (Paid)', fmtMoney(totalRevenue), 'dollar-sign')}
         ${kpi('Active Clients', clients.filter(c=>c.status==='ACTIVE').length, 'building-2')}
+        ${kpi('Client Retention', retention.toFixed(1)+'%', 'shield-check')}
         ${kpi('Open Pipeline Value', fmtMoney(openLeadsVal), 'users')}
         ${kpi('Overdue Tasks', overdue, 'alert-triangle')}
+        ${kpi('Ascend Impact Score™', avgImpact, 'sparkles')}
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="premium-card p-5 lg:col-span-2">
-          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Revenue vs Expense</h3>
-          <div id="chart-revenue" class="h-64"></div>
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Revenue Trend (Last 6 Months)</h3>
+          <div id="chart-revenue-trend" class="h-64"></div>
         </div>
         <div class="premium-card p-5">
           <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Client Health</h3>
           <div class="space-y-3">
-            ${clients.map(c => `
+            ${clients.map(c => { const hs = computeHealthScore(c, projects, finance); return `
               <div>
-                <div class="flex justify-between text-xs font-semibold mb-1"><span>${esc(c.name)}</span><span class="${healthColor(c.maturity_score||50)}">${c.maturity_score||50}</span></div>
-                <div class="progress-track"><div class="progress-fill" style="width:${c.maturity_score||50}%"></div></div>
-              </div>`).join('')}
+                <div class="flex justify-between text-xs font-semibold mb-1"><span>${esc(c.name)}</span><span class="${healthColor(hs)}">${hs} · ${healthLabel(hs)}</span></div>
+                <div class="progress-track"><div class="progress-fill" style="width:${hs}%"></div></div>
+              </div>`; }).join('') || '<p class="text-sm text-slate-400">No clients yet.</p>'}
           </div>
         </div>
       </div>
 
-      <div class="premium-card p-5">
-        <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Recent Leads</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
-              <th class="py-2">Company</th><th>Stage</th><th>Value</th><th>Source</th></tr></thead>
-            <tbody>
-              ${leads.slice(0,6).map(l => `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
-                <td class="py-2 font-semibold">${esc(l.company)}</td><td>${statusPill(l.status)}</td><td>${fmtMoney(l.value)}</td><td class="text-slate-400">${esc(l.source)}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="premium-card p-5">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Revenue by Division</h3>
+          <div id="chart-revenue" class="h-64"></div>
+        </div>
+        <div class="premium-card p-5 lg:col-span-2">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Recent Leads</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
+                <th class="py-2">Company</th><th>Stage</th><th>Value</th><th>Source</th></tr></thead>
+              <tbody>
+                ${leads.slice(0,6).map(l => `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
+                  <td class="py-2 font-semibold">${esc(l.company)}</td><td>${statusPill(l.status)}</td><td>${fmtMoney(l.value)}</td><td class="text-slate-400">${esc(l.source)}</td>
+                </tr>`).join('') || '<tr><td colspan="4" class="p-4 text-center text-slate-400">No leads yet.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
       </div>
@@ -785,6 +1082,13 @@ async function renderDashboard(root){
 
   $('#dl-dashboard-pdf').addEventListener('click', () => generateFullReportPDF());
 
+  new ApexCharts($('#chart-revenue-trend'), {
+    chart:{ type:'area', height:250, toolbar:{show:false}, fontFamily:'Plus Jakarta Sans' },
+    series:[ { name:'Revenue', data:seriesRevenue }, { name:'Expense', data:seriesExpense } ],
+    xaxis:{ categories:seriesLabels }, colors:['#0E4F73','#FF3B30'],
+    stroke:{ curve:'smooth', width:2 }, fill:{ type:'gradient', gradient:{ opacityFrom:.35, opacityTo:.05 } },
+    legend:{ position:'top' }, dataLabels:{ enabled:false }
+  }).render();
 
   // chart
   const byDivision = {};
@@ -816,7 +1120,8 @@ function kpi(label, value, icon){
 ============================================================================ */
 async function renderClients(root){
   const canEdit = currentUser.role === 'ADMIN';
-  const clients = await dbList('clients');
+  const [clients, projects, finance, profiles] = await Promise.all([dbList('clients'), dbList('projects'), dbList('finance'), dbList('profiles')]);
+  const strategistMap = {}; profiles.forEach(p => strategistMap[p.id] = p);
   root.innerHTML = `
     <div class="view-fade-in space-y-4">
       <div class="flex items-center justify-between">
@@ -826,29 +1131,36 @@ async function renderClients(root){
       <div class="premium-card overflow-hidden">
         <table class="w-full text-sm">
           <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
-            <th class="py-3 px-4">Company</th><th>Status</th><th>Contract</th><th>Renewal</th><th>Health</th><th></th></tr></thead>
+            <th class="py-3 px-4">Company</th><th>Status</th><th>Lifecycle</th><th>Strategist</th><th>Contract</th><th>Renewal</th><th>Health</th><th></th></tr></thead>
           <tbody id="clients-tbody"></tbody>
         </table>
       </div>
     </div>`;
 
   function draw(list){
-    $('#clients-tbody').innerHTML = list.map(c => `
-      <tr class="border-b last:border-0 hover:bg-black/[.015]" style="border-color:var(--border-light)">
+    $('#clients-tbody').innerHTML = list.map(c => { const hs = computeHealthScore(c, projects, finance); return `
+      <tr class="border-b last:border-0 hover:bg-black/[.015] cursor-pointer client-row" data-id="${c.id}" style="border-color:var(--border-light)">
         <td class="py-3 px-4"><span class="mr-2">${c.logo||'🏢'}</span><span class="font-semibold">${esc(c.name)}</span><br><span class="text-xs text-slate-400 pl-6">${esc(c.industry||'')}</span></td>
         <td>${statusPill(c.status)}</td>
+        <td>${statusPill(c.lifecycle_stage||'Onboarding')}</td>
+        <td class="text-slate-400 text-xs">${esc(strategistMap[c.assigned_strategist]?.full_name || '—')}</td>
         <td class="font-semibold">${fmtMoney(c.contract_value)}</td>
         <td class="text-slate-400">${fmtDate(c.renewal_date)}</td>
-        <td><span class="font-bold ${healthColor(c.maturity_score||50)}">${c.maturity_score||50}</span></td>
+        <td><span class="font-bold ${healthColor(hs)}">${hs}</span></td>
         <td class="text-right px-4">
           ${canEdit ? `<button data-id="${c.id}" class="edit-client-btn text-ascendBlue mr-3"><i data-lucide="pencil" class="w-4 h-4"></i></button>
           <button data-id="${c.id}" class="del-client-btn btn-danger"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
         </td>
-      </tr>`).join('') || `<tr><td colspan="6" class="p-6 text-center text-slate-400">No clients yet.</td></tr>`;
+      </tr>`; }).join('') || `<tr><td colspan="8" class="p-6 text-center text-slate-400">No clients yet.</td></tr>`;
     lucide.createIcons();
+    $$('.client-row').forEach(row => row.addEventListener('click', (e) => {
+      if (e.target.closest('.edit-client-btn') || e.target.closest('.del-client-btn')) return;
+      openClientDetail(clients.find(c=>c.id===row.dataset.id));
+    }));
     if (canEdit){
-      $$('.edit-client-btn').forEach(b => b.addEventListener('click', () => openClientForm(clients.find(c=>c.id===b.dataset.id))));
-      $$('.del-client-btn').forEach(b => b.addEventListener('click', async () => {
+      $$('.edit-client-btn').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); openClientForm(clients.find(c=>c.id===b.dataset.id), profiles); }));
+      $$('.del-client-btn').forEach(b => b.addEventListener('click', async (e) => {
+        e.stopPropagation();
         if (!confirm('Delete this client permanently?')) return;
         await dbDelete('clients', b.dataset.id); toast('Client deleted.'); renderView('clients');
       }));
@@ -859,11 +1171,127 @@ async function renderClients(root){
     const q = e.target.value.toLowerCase();
     draw(clients.filter(c => c.name.toLowerCase().includes(q) || (c.industry||'').toLowerCase().includes(q)));
   });
-  if (canEdit) $('#add-client-btn').addEventListener('click', () => openClientForm(null));
+  if (canEdit) $('#add-client-btn').addEventListener('click', () => openClientForm(null, profiles));
 }
 
-function openClientForm(client){
-  const c = client || { name:'', industry:'', email:'', phone:'', website:'', contact_name:'', contract_value:0, renewal_date:'', status:'ONBOARDING', notes:'', maturity_score:50, logo:'🏢' };
+async function openClientDetail(client){
+  const [projects, leads, finance, content, automations] = await Promise.all([
+    dbList('projects', { client_id: client.id }), dbList('leads', { client_id: client.id }),
+    dbList('finance', { client_id: client.id }), dbList('content_items', { client_id: client.id }),
+    dbList('automations', { client_id: client.id })
+  ]);
+  const hs = computeHealthScore(client, projects, finance);
+  const impact = computeImpactScore(client.id, content, automations, projects);
+  const breakdown = (client.maturity_breakdown && Object.keys(client.maturity_breakdown).length) ? client.maturity_breakdown : emptyMaturityBreakdown();
+  const canEdit = currentUser.role === 'ADMIN';
+
+  openDetailModal(client.name, `
+    <div class="space-y-6">
+      <div class="premium-card p-5 flex items-center gap-4">
+        <div class="text-4xl">${client.logo||'🏢'}</div>
+        <div class="flex-1">
+          <h2 class="font-heading font-extrabold text-lg">${esc(client.name)}</h2>
+          <p class="text-xs text-slate-400">${esc(client.industry||'')} · ${statusPill(client.status)} · ${statusPill(client.lifecycle_stage||'Onboarding')}</p>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] font-bold uppercase text-slate-400 block">Health Score</span>
+          <span class="font-heading font-extrabold text-2xl ${healthColor(hs)}">${hs} · ${healthLabel(hs)}</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        ${kpi('Contract Value', fmtMoney(client.contract_value), 'file-text')}
+        ${kpi('Renewal Date', fmtDate(client.renewal_date), 'calendar')}
+        ${kpi('Revenue', fmtMoney(client.revenue), 'dollar-sign')}
+        ${kpi('Revenue Goal', fmtMoney(client.goal), 'target')}
+      </div>
+
+      <div class="premium-card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider">Ascend Impact Score™</h3>
+          <span class="font-heading font-extrabold text-xl ${healthColor(impact.overall)}">${impact.overall}</span>
+        </div>
+        <p class="text-xs text-slate-400 mb-4">A current-snapshot estimate of value delivered across all three divisions — not a historical trend.</p>
+        <div class="grid grid-cols-3 gap-4">
+          <div><div class="flex justify-between text-xs font-semibold mb-1"><span>Media</span><span>${impact.media}</span></div><div class="progress-track"><div class="progress-fill" style="width:${impact.media}%"></div></div></div>
+          <div><div class="flex justify-between text-xs font-semibold mb-1"><span>Systems</span><span>${impact.systems}</span></div><div class="progress-track"><div class="progress-fill" style="width:${impact.systems}%"></div></div></div>
+          <div><div class="flex justify-between text-xs font-semibold mb-1"><span>Software</span><span>${impact.software}</span></div><div class="progress-track"><div class="progress-fill" style="width:${impact.software}%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="premium-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider">Business Maturity</h3>
+          ${canEdit ? '<button id="save-maturity-btn" class="btn-ghost">Save Scores</button>' : ''}
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div id="maturity-radar" class="h-64"></div>
+          <div class="space-y-2">
+            ${MATURITY_AXES.map(axis => `
+              <div class="flex items-center gap-3">
+                <span class="text-xs font-semibold w-36 flex-shrink-0">${axis}</span>
+                <input type="range" min="0" max="100" data-axis="${axis}" class="maturity-slider flex-1" value="${breakdown[axis]||50}" ${canEdit?'':'disabled'}>
+                <span class="text-xs font-bold w-8 text-right maturity-val" data-axis-val="${axis}">${breakdown[axis]||50}</span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="premium-card p-5">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-3">Profile</h3>
+          <div class="space-y-1.5 text-xs">
+            <p><span class="text-slate-400">Primary Contact:</span> <span class="font-semibold">${esc(client.contact_name||'—')}</span></p>
+            <p><span class="text-slate-400">Email:</span> <span class="font-semibold">${esc(client.email||'—')}</span></p>
+            <p><span class="text-slate-400">Phone:</span> <span class="font-semibold">${esc(client.phone||'—')}</span></p>
+            <p><span class="text-slate-400">Website:</span> <span class="font-semibold">${esc(client.website||'—')}</span></p>
+            <p><span class="text-slate-400">Employees:</span> <span class="font-semibold">${client.employees||0}</span></p>
+            <p><span class="text-slate-400">Current CRM:</span> <span class="font-semibold">${esc(client.current_crm||'—')}</span></p>
+            <p><span class="text-slate-400">Current Website:</span> <span class="font-semibold">${esc(client.current_website||'—')}</span></p>
+            <p><span class="text-slate-400">Marketing Channels:</span> <span class="font-semibold">${esc(client.marketing_channels||'—')}</span></p>
+            <p><span class="text-slate-400">Sales Process:</span> <span class="font-semibold">${esc(client.sales_process||'—')}</span></p>
+            <p><span class="text-slate-400">Notes:</span> <span class="font-semibold">${esc(client.notes||'—')}</span></p>
+          </div>
+        </div>
+        <div class="premium-card p-5">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-3">Activity Summary</h3>
+          <div class="space-y-1.5 text-xs">
+            <p><span class="text-slate-400">Projects:</span> <span class="font-semibold">${projects.length} (${projects.filter(p=>p.status==='ACTIVE').length} active)</span></p>
+            <p><span class="text-slate-400">Related Deals:</span> <span class="font-semibold">${leads.length}</span></p>
+            <p><span class="text-slate-400">Finance Records:</span> <span class="font-semibold">${finance.length}</span></p>
+            <p><span class="text-slate-400">Content Items:</span> <span class="font-semibold">${content.length}</span></p>
+            <p><span class="text-slate-400">Automations:</span> <span class="font-semibold">${automations.length}</span></p>
+          </div>
+          ${projects.length ? `<div class="mt-3 pt-3 border-t space-y-2" style="border-color:var(--border-light)">
+            ${projects.map(p=>`<div class="flex justify-between text-xs"><span class="font-semibold">${esc(p.name)}</span>${statusPill(p.status)}</div>`).join('')}
+          </div>` : ''}
+        </div>
+      </div>
+    </div>`);
+
+  new ApexCharts($('#maturity-radar'), {
+    chart:{ type:'radar', height:250, toolbar:{show:false}, fontFamily:'Plus Jakarta Sans' },
+    series:[{ name:'Maturity', data: MATURITY_AXES.map(a=>breakdown[a]||50) }],
+    labels: MATURITY_AXES, colors:['#0E4F73'],
+    yaxis:{ min:0, max:100, tickAmount:4, labels:{show:false} }
+  }).render();
+
+  if (canEdit){
+    $$('.maturity-slider').forEach(sl => sl.addEventListener('input', () => {
+      $(`.maturity-val[data-axis-val="${sl.dataset.axis}"]`).textContent = sl.value;
+    }));
+    $('#save-maturity-btn').addEventListener('click', async () => {
+      const updated = {};
+      $$('.maturity-slider').forEach(sl => updated[sl.dataset.axis] = Number(sl.value));
+      try { await dbUpdate('clients', client.id, { maturity_breakdown: updated }); toast('Maturity scores saved.'); closeDetailModal(); renderView('clients'); }
+      catch(err){ toast(err.message||'Save failed', 'err'); }
+    });
+  }
+}
+
+function openClientForm(client, profiles=[]){
+  const c = client || { name:'', industry:'', email:'', phone:'', website:'', contact_name:'', contract_value:0, revenue:0, goal:0, employees:0, current_crm:'', current_website:'', marketing_channels:'', sales_process:'', assigned_strategist:'', renewal_date:'', status:'ONBOARDING', lifecycle_stage:'Onboarding', notes:'', logo:'🏢' };
+  const strategistOptions = profiles.filter(p=>['ADMIN','CEO','STAFF'].includes(p.role)).map(p=>`<option value="${p.id}" ${c.assigned_strategist===p.id?'selected':''}>${esc(p.full_name)}</option>`).join('');
   openModal(client ? 'Edit Client' : 'Add New Client', `
     <form id="client-form" class="space-y-4">
       <div class="grid grid-cols-2 gap-4">
@@ -881,12 +1309,25 @@ function openClientForm(client){
       <div class="grid grid-cols-3 gap-4">
         <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Contract Value</label><input type="number" id="f-contract" class="input-field" value="${c.contract_value}"></div>
         <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Renewal Date</label><input type="date" id="f-renewal" class="input-field" value="${c.renewal_date||''}"></div>
-        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Health Score</label><input type="number" min="0" max="100" id="f-health" class="input-field" value="${c.maturity_score||50}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Employees</label><input type="number" id="f-employees" class="input-field" value="${c.employees||0}"></div>
       </div>
-      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label>
-        <select id="f-status" class="input-field">
-          ${['ONBOARDING','ACTIVE','SUSPENDED'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${s}</option>`).join('')}
-        </select>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Revenue</label><input type="number" id="f-revenue" class="input-field" value="${c.revenue||0}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Revenue Goal</label><input type="number" id="f-goal" class="input-field" value="${c.goal||0}"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Current CRM</label><input id="f-crm" class="input-field" value="${esc(c.current_crm||'')}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Current Website Platform</label><input id="f-currweb" class="input-field" value="${esc(c.current_website||'')}"></div>
+      </div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Marketing Channels</label><input id="f-channels" class="input-field" value="${esc(c.marketing_channels||'')}" placeholder="LinkedIn, Referral, Google Ads…"></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Sales Process</label><input id="f-salesprocess" class="input-field" value="${esc(c.sales_process||'')}"></div>
+      <div class="grid grid-cols-3 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label>
+          <select id="f-status" class="input-field">${['ONBOARDING','ACTIVE','SUSPENDED'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Lifecycle Stage</label>
+          <select id="f-lifecycle" class="input-field">${LIFECYCLE_STAGES.map(s=>`<option value="${s}" ${(c.lifecycle_stage||'Onboarding')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Growth Strategist</label>
+          <select id="f-strategist" class="input-field"><option value="">— Unassigned —</option>${strategistOptions}</select></div>
       </div>
       <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Notes</label><textarea id="f-notes" rows="2" class="input-field">${esc(c.notes)}</textarea></div>
       <div class="flex justify-end gap-3 pt-3 border-t" style="border-color:var(--border-light)">
@@ -901,11 +1342,15 @@ function openClientForm(client){
       name: $('#f-name').value.trim(), industry: $('#f-industry').value.trim(), email: $('#f-email').value.trim(),
       phone: $('#f-phone').value.trim(), contact_name: $('#f-contact').value.trim(), website: $('#f-website').value.trim(),
       contract_value: Number($('#f-contract').value||0), renewal_date: $('#f-renewal').value || null,
-      maturity_score: Number($('#f-health').value||50), status: $('#f-status').value, notes: $('#f-notes').value.trim(), logo: c.logo
+      employees: Number($('#f-employees').value||0), revenue: Number($('#f-revenue').value||0), goal: Number($('#f-goal').value||0),
+      current_crm: $('#f-crm').value.trim(), current_website: $('#f-currweb').value.trim(),
+      marketing_channels: $('#f-channels').value.trim(), sales_process: $('#f-salesprocess').value.trim(),
+      assigned_strategist: $('#f-strategist').value || null,
+      status: $('#f-status').value, lifecycle_stage: $('#f-lifecycle').value, notes: $('#f-notes').value.trim(), logo: c.logo
     };
     try {
       if (client) await dbUpdate('clients', client.id, patch);
-      else await dbInsert('clients', { ...patch, created_by: currentUser.id });
+      else await dbInsert('clients', { ...patch, created_by: currentUser.id, maturity_breakdown: emptyMaturityBreakdown() });
       toast('Client saved.'); closeModal(); renderView('clients');
     } catch(err){ toast(err.message||'Save failed', 'err'); }
   });
@@ -914,7 +1359,7 @@ function openClientForm(client){
 /* ============================================================================
    VIEW: LEADS & PIPELINE (CEO read-only, ADMIN & STAFF full CRUD + drag)
 ============================================================================ */
-const LEAD_STAGES = ['Discovery','Audit','Proposal','Negotiation','Won','Lost'];
+const LEAD_STAGES = ['Lead','Discovery','Audit','Proposal','Negotiation','Won','Lost'];
 const DIVISIONS = ['All Divisions','Ascend Media','Ascend Systems','Ascend Software'];
 const PAYMENT_TYPES = ['One-Time','Monthly'];
 async function renderLeads(root){
@@ -926,7 +1371,7 @@ async function renderLeads(root){
         <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-slate-400">Pipeline — ${leads.length} Prospects</h3>
         ${canEdit ? '<button id="add-lead-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Lead</button>' : ''}
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3" id="kanban-board">
+      <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-7 gap-3" id="kanban-board">
         ${LEAD_STAGES.map(stage => `
           <div class="kanban-col premium-card p-3" data-stage="${stage}">
             <div class="flex items-center justify-between mb-3">
@@ -980,7 +1425,7 @@ async function renderLeads(root){
 }
 
 function openLeadForm(lead){
-  const l = lead || { company:'', contact_name:'', email:'', phone:'', status:'Discovery', value:0, probability:50, source:'' };
+  const l = lead || { company:'', contact_name:'', email:'', phone:'', status:'Lead', value:0, probability:50, source:'', competitor:'', reason_lost:'', close_date:'' };
   openModal(lead ? 'Edit Lead' : 'Create New Lead', `
     <form id="lead-form" class="space-y-4">
       <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Company</label><input required id="f-company" class="input-field" value="${esc(l.company)}"></div>
@@ -999,6 +1444,11 @@ function openLeadForm(lead){
         <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Probability (%)</label><input type="number" min="0" max="100" id="f-prob" class="input-field" value="${l.probability}"></div>
       </div>
       <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Source</label><input id="f-source" class="input-field" value="${esc(l.source)}" placeholder="LinkedIn, Referral…"></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Competitor</label><input id="f-competitor" class="input-field" value="${esc(l.competitor||'')}" placeholder="Who else are they considering?"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Close Date</label><input type="date" id="f-close" class="input-field" value="${l.close_date||''}"></div>
+      </div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Reason Lost (if applicable)</label><input id="f-reasonlost" class="input-field" value="${esc(l.reason_lost||'')}"></div>
       <div class="flex justify-between items-center pt-3 border-t" style="border-color:var(--border-light)">
         ${lead ? '<button type="button" id="del-lead-btn" class="btn-danger">Delete Lead</button>' : '<span></span>'}
         <div class="flex gap-3"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save Lead</button></div>
@@ -1012,13 +1462,74 @@ function openLeadForm(lead){
   $('#lead-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const patch = { company:$('#f-company').value.trim(), contact_name:$('#f-contact').value.trim(), status:$('#f-stage').value,
-      email:$('#f-email').value.trim(), phone:$('#f-phone').value.trim(), value:Number($('#f-value').value||0), probability:Number($('#f-prob').value||0), source:$('#f-source').value.trim() };
+      email:$('#f-email').value.trim(), phone:$('#f-phone').value.trim(), value:Number($('#f-value').value||0), probability:Number($('#f-prob').value||0), source:$('#f-source').value.trim(),
+      competitor:$('#f-competitor').value.trim(), close_date:$('#f-close').value||null, reason_lost:$('#f-reasonlost').value.trim() };
     try {
       if (lead) await dbUpdate('leads', lead.id, patch);
       else await dbInsert('leads', { ...patch, created_by: currentUser.id });
       toast('Lead saved.'); closeModal(); renderView('leads');
     } catch(err){ toast(err.message||'Save failed', 'err'); }
   });
+}
+
+/* ============================================================================
+   VIEW: SALES PIPELINE (post-win client lifecycle — CEO/ADMIN/STAFF view, ADMIN edits)
+============================================================================ */
+async function renderSalesPipeline(root){
+  const canEdit = currentUser.role === 'ADMIN';
+  const clients = await dbList('clients');
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      <div>
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-slate-400">Client Lifecycle — ${clients.length} Accounts</h3>
+        <p class="text-xs text-slate-400 mt-1">Post-win journey: existing clients move from Onboarding through Growth, Renewal, and Expansion.</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3" id="pipeline-board">
+        ${LIFECYCLE_STAGES.map(stage => `
+          <div class="kanban-col premium-card p-3" data-stage="${stage}">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${stage}</span>
+              <span class="text-[10px] font-bold bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded">${clients.filter(c=>(c.lifecycle_stage||'Onboarding')===stage).length}</span>
+            </div>
+            <div class="space-y-2 stage-list" data-stage="${stage}"></div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  function draw(){
+    LIFECYCLE_STAGES.forEach(stage => {
+      const col = $(`.stage-list[data-stage="${stage}"]`);
+      const items = clients.filter(c => (c.lifecycle_stage||'Onboarding') === stage);
+      col.innerHTML = items.map(c => `
+        <div class="lead-card premium-card p-3 cursor-pointer" ${canEdit?'draggable="true"':''} data-id="${c.id}">
+          <p class="font-semibold text-xs">${c.logo||'🏢'} ${esc(c.name)}</p>
+          <div class="flex justify-between items-center mt-2">
+            <span class="text-xs font-bold text-ascendBlue">${fmtMoney(c.contract_value)}</span>
+            ${statusPill(c.status)}
+          </div>
+        </div>`).join('');
+    });
+    $$('#pipeline-board .lead-card').forEach(card => {
+      card.addEventListener('click', () => openClientDetail(clients.find(c=>c.id===card.dataset.id)));
+      if (canEdit){
+        card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.dataset.id); card.classList.add('dragging'); });
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+      }
+    });
+    if (canEdit){
+      $$('.stage-list').forEach(col => {
+        col.addEventListener('dragover', (e) => e.preventDefault());
+        col.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData('text/plain');
+          const newStage = col.dataset.stage;
+          await dbUpdate('clients', id, { lifecycle_stage: newStage });
+          toast(`Moved to ${newStage}.`); renderView('pipeline');
+        });
+      });
+    }
+  }
+  draw();
 }
 
 /* ============================================================================
@@ -1067,7 +1578,7 @@ async function renderProjects(root){
   }
 }
 function openProjectForm(project, clientMap){
-  const p = project || { name:'', description:'', client_id:'', division:'Ascend Software', status:'ACTIVE', progress:0, budget:0, deadline:'' };
+  const p = project || { name:'', description:'', client_id:'', division:'Ascend Software', status:'ACTIVE', progress:0, budget:0, deadline:'', users_count:0, sessions:0, conversion_rate:0, uptime:99.9, bugs_open:0 };
   const clientOptions = Object.values(clientMap).map(c=>`<option value="${c.id}" ${p.client_id===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
   openModal(project ? 'Edit Project' : 'Add Project', `
     <form id="proj-form" class="space-y-4">
@@ -1085,19 +1596,615 @@ function openProjectForm(project, clientMap){
         <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Deadline</label><input type="date" id="f-deadline" class="input-field" value="${p.deadline||''}"></div>
       </div>
       <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Description</label><textarea id="f-desc" rows="2" class="input-field">${esc(p.description)}</textarea></div>
+      <div class="pt-3 border-t" style="border-color:var(--border-light)">
+        <p class="text-[11px] font-bold uppercase text-slate-400 mb-2">Software Analytics (Ascend Software projects)</p>
+        <div class="grid grid-cols-3 gap-4 mb-3">
+          <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Users</label><input type="number" id="f-users" class="input-field" value="${p.users_count||0}"></div>
+          <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Sessions</label><input type="number" id="f-sessions" class="input-field" value="${p.sessions||0}"></div>
+          <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Conversion Rate (%)</label><input type="number" step="0.1" id="f-conversion" class="input-field" value="${p.conversion_rate||0}"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Uptime (%)</label><input type="number" step="0.01" id="f-uptime" class="input-field" value="${p.uptime||99.9}"></div>
+          <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Bugs Open</label><input type="number" id="f-bugs" class="input-field" value="${p.bugs_open||0}"></div>
+        </div>
+      </div>
       <div class="flex justify-end gap-3 pt-3 border-t" style="border-color:var(--border-light)"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save Project</button></div>
     </form>`);
   $('#cancel-btn').addEventListener('click', closeModal);
   $('#proj-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const patch = { name:$('#f-name').value.trim(), client_id:$('#f-client').value||null, division:$('#f-division').value, status:$('#f-status').value,
-      progress:Number($('#f-progress').value||0), budget:Number($('#f-budget').value||0), deadline:$('#f-deadline').value||null, description:$('#f-desc').value.trim() };
+      progress:Number($('#f-progress').value||0), budget:Number($('#f-budget').value||0), deadline:$('#f-deadline').value||null, description:$('#f-desc').value.trim(),
+      users_count:Number($('#f-users').value||0), sessions:Number($('#f-sessions').value||0), conversion_rate:Number($('#f-conversion').value||0),
+      uptime:Number($('#f-uptime').value||99.9), bugs_open:Number($('#f-bugs').value||0) };
     try {
       if (project) await dbUpdate('projects', project.id, patch);
       else await dbInsert('projects', { ...patch, created_by: currentUser.id });
       toast('Project saved.'); closeModal(); renderView('projects');
     } catch(err){ toast(err.message||'Save failed', 'err'); }
   });
+}
+
+/* ============================================================================
+   VIEW: TASKS (List + Kanban — CEO/ADMIN)
+============================================================================ */
+const TASK_STATUSES = ['TODO','IN_PROGRESS','REVIEW','DONE'];
+let tasksViewMode = 'kanban';
+async function renderTasks(root){
+  const [tasks, { map: clientMap }, projects, profiles] = await Promise.all([dbList('tasks'), getClientMap(), dbList('projects'), dbList('profiles')]);
+  const projectMap = {}; projects.forEach(p => projectMap[p.id] = p);
+  const profileMap = {}; profiles.forEach(p => profileMap[p.id] = p);
+  const overdue = tasks.filter(t=>t.status!=='DONE' && t.due_date && new Date(t.due_date) < new Date()).length;
+
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        ${kpi('Total Tasks', tasks.length, 'check-square')}
+        ${kpi('In Progress', tasks.filter(t=>t.status==='IN_PROGRESS').length, 'loader')}
+        ${kpi('Overdue', overdue, 'alert-triangle')}
+        ${kpi('Completed', tasks.filter(t=>t.status==='DONE').length, 'check-circle-2')}
+      </div>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 border-b" style="border-color:var(--border-light)">
+          <button id="tasks-view-kanban" class="custom-tab-btn px-4 py-2 text-xs font-bold uppercase">Kanban</button>
+          <button id="tasks-view-list" class="custom-tab-btn px-4 py-2 text-xs font-bold uppercase">List</button>
+        </div>
+        <button id="add-task-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Task</button>
+      </div>
+      <div id="tasks-body"></div>
+    </div>`;
+
+  function drawKanban(){
+    $('#tasks-body').innerHTML = `<div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+      ${TASK_STATUSES.map(st => `
+        <div class="kanban-col premium-card p-3" data-status="${st}">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${st.replace('_',' ')}</span>
+            <span class="text-[10px] font-bold bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded">${tasks.filter(t=>t.status===st).length}</span>
+          </div>
+          <div class="space-y-2 task-list" data-status="${st}"></div>
+        </div>`).join('')}
+    </div>`;
+    TASK_STATUSES.forEach(st => {
+      const col = $(`.task-list[data-status="${st}"]`);
+      const items = tasks.filter(t => t.status === st);
+      col.innerHTML = items.map(t => {
+        const late = t.status!=='DONE' && t.due_date && new Date(t.due_date) < new Date();
+        const subtasks = t.subtasks || [];
+        const doneCount = subtasks.filter(s=>s.done).length;
+        return `<div class="lead-card premium-card p-3 cursor-pointer" draggable="true" data-id="${t.id}">
+          <div class="flex justify-between items-start"><p class="font-semibold text-xs">${esc(t.title)}</p>${late?'<i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-ascendRed flex-shrink-0"></i>':''}</div>
+          <p class="text-[11px] text-slate-400">${esc(clientMap[t.client_id]?.name||projectMap[t.project_id]?.name||'—')}</p>
+          <div class="flex justify-between items-center mt-2">
+            <span class="text-[10px] font-bold uppercase ${t.priority==='Urgent'||t.priority==='High'?'text-ascendRed':'text-slate-400'}">${t.priority}</span>
+            <span class="text-[10px] text-slate-400">${t.due_date?fmtDate(t.due_date):''}</span>
+          </div>
+          ${subtasks.length ? `<div class="text-[10px] text-slate-400 mt-1">${doneCount}/${subtasks.length} subtasks</div>` : ''}
+        </div>`;
+      }).join('');
+    });
+    lucide.createIcons();
+    $$('.task-list .lead-card').forEach(card => {
+      card.addEventListener('click', () => openTaskForm(tasks.find(t=>t.id===card.dataset.id), clientMap, projects, profiles));
+      card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.dataset.id); card.classList.add('dragging'); });
+      card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    });
+    $$('.task-list').forEach(col => {
+      col.addEventListener('dragover', (e) => e.preventDefault());
+      col.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        const id = e.dataTransfer.getData('text/plain');
+        await dbUpdate('tasks', id, { status: col.dataset.status });
+        toast('Task moved.'); renderView('tasks');
+      });
+    });
+  }
+  function drawList(){
+    $('#tasks-body').innerHTML = `<div class="premium-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
+          <th class="py-3 px-4">Task</th><th>Client / Project</th><th>Assignee</th><th>Priority</th><th>Status</th><th>Due</th><th>Recurring</th></tr></thead>
+        <tbody>${tasks.map(t => `<tr class="border-b last:border-0 cursor-pointer hover:bg-black/[.015] task-row" data-id="${t.id}" style="border-color:var(--border-light)">
+          <td class="py-3 px-4 font-semibold">${esc(t.title)}</td>
+          <td class="text-slate-400 text-xs">${esc(clientMap[t.client_id]?.name||projectMap[t.project_id]?.name||'—')}</td>
+          <td class="text-slate-400 text-xs">${esc(profileMap[t.assigned_to]?.full_name||'Unassigned')}</td>
+          <td class="text-xs font-bold ${t.priority==='Urgent'||t.priority==='High'?'text-ascendRed':''}">${t.priority}</td>
+          <td>${statusPill(t.status)}</td><td class="text-slate-400">${fmtDate(t.due_date)}</td><td class="text-slate-400 text-xs">${t.recurring&&t.recurring!=='None'?t.recurring:'—'}</td>
+        </tr>`).join('') || `<tr><td colspan="7" class="p-6 text-center text-slate-400">No tasks yet.</td></tr>`}</tbody>
+      </table>
+    </div>`;
+    $$('.task-row').forEach(row => row.addEventListener('click', () => openTaskForm(tasks.find(t=>t.id===row.dataset.id), clientMap, projects, profiles)));
+  }
+  function setView(mode){
+    tasksViewMode = mode;
+    $('#tasks-view-kanban').classList.toggle('active', mode==='kanban');
+    $('#tasks-view-list').classList.toggle('active', mode==='list');
+    if (mode==='kanban') drawKanban(); else drawList();
+  }
+  $('#tasks-view-kanban').addEventListener('click', () => setView('kanban'));
+  $('#tasks-view-list').addEventListener('click', () => setView('list'));
+  setView(tasksViewMode);
+  $('#add-task-btn').addEventListener('click', () => openTaskForm(null, clientMap, projects, profiles));
+}
+
+function openTaskForm(task, clientMap, projects, profiles){
+  const t = task || { title:'', description:'', client_id:'', project_id:'', status:'TODO', priority:'Medium', due_date:'', assigned_to:'', recurring:'None', subtasks:[] };
+  const clientOptions = Object.values(clientMap).map(c=>`<option value="${c.id}" ${t.client_id===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+  const projectOptions = projects.map(p=>`<option value="${p.id}" ${t.project_id===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
+  const assigneeOptions = profiles.filter(p=>['ADMIN','CEO','STAFF'].includes(p.role)).map(p=>`<option value="${p.id}" ${t.assigned_to===p.id?'selected':''}>${esc(p.full_name)}</option>`).join('');
+  const subtasks = t.subtasks || [];
+  openModal(task ? 'Edit Task' : 'Add Task', `
+    <form id="task-form" class="space-y-4">
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Title</label><input required id="f-title" class="input-field" value="${esc(t.title)}"></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Description</label><textarea id="f-desc" rows="2" class="input-field">${esc(t.description||'')}</textarea></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Client</label><select id="f-client" class="input-field"><option value="">— None —</option>${clientOptions}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Project</label><select id="f-project" class="input-field"><option value="">— None —</option>${projectOptions}</select></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Assignee</label><select id="f-assignee" class="input-field"><option value="">— Unassigned —</option>${assigneeOptions}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Priority</label><select id="f-priority" class="input-field">${['Low','Medium','High','Urgent'].map(p=>`<option ${t.priority===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label><select id="f-status" class="input-field">${TASK_STATUSES.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${s.replace('_',' ')}</option>`).join('')}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Due Date</label><input type="date" id="f-due" class="input-field" value="${t.due_date||''}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Recurring</label><select id="f-recurring" class="input-field">${['None','Daily','Weekly','Monthly'].map(r=>`<option ${(t.recurring||'None')===r?'selected':''}>${r}</option>`).join('')}</select></div>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Subtasks</label>
+        <div id="subtask-list" class="space-y-1.5 mb-2">
+          ${subtasks.map((s,idx)=>`<div class="flex items-center gap-2 subtask-row" data-idx="${idx}">
+            <input type="checkbox" class="subtask-done" ${s.done?'checked':''}>
+            <input type="text" class="input-field subtask-title" value="${esc(s.title)}">
+            <button type="button" class="del-subtask-btn btn-danger"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+          </div>`).join('')}
+        </div>
+        <button type="button" id="add-subtask-btn" class="btn-ghost text-xs">+ Add Subtask</button>
+      </div>
+      <div class="flex justify-between items-center pt-3 border-t" style="border-color:var(--border-light)">
+        ${task ? '<button type="button" id="del-task-btn" class="btn-danger">Delete Task</button>' : '<span></span>'}
+        <div class="flex gap-3"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save Task</button></div>
+      </div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  $('#add-subtask-btn').addEventListener('click', () => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2 subtask-row';
+    row.innerHTML = `<input type="checkbox" class="subtask-done"><input type="text" class="input-field subtask-title" placeholder="New subtask…"><button type="button" class="del-subtask-btn btn-danger"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>`;
+    $('#subtask-list').appendChild(row);
+    row.querySelector('.del-subtask-btn').addEventListener('click', () => row.remove());
+    lucide.createIcons();
+  });
+  $$('.del-subtask-btn').forEach(b => b.addEventListener('click', () => b.closest('.subtask-row').remove()));
+  if (task) $('#del-task-btn').addEventListener('click', async () => {
+    if (!confirm('Delete this task?')) return;
+    await dbDelete('tasks', task.id); toast('Task deleted.'); closeModal(); renderView('tasks');
+  });
+  $('#task-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newSubtasks = $$('.subtask-row').map(row => ({ title: row.querySelector('.subtask-title').value.trim(), done: row.querySelector('.subtask-done').checked })).filter(s=>s.title);
+    const patch = { title:$('#f-title').value.trim(), description:$('#f-desc').value.trim(), client_id:$('#f-client').value||null, project_id:$('#f-project').value||null,
+      assigned_to:$('#f-assignee').value||null, priority:$('#f-priority').value, status:$('#f-status').value, due_date:$('#f-due').value||null,
+      recurring:$('#f-recurring').value, subtasks:newSubtasks };
+    try {
+      if (task) await dbUpdate('tasks', task.id, patch);
+      else await dbInsert('tasks', patch);
+      toast('Task saved.'); closeModal(); renderView('tasks');
+    } catch(err){ toast(err.message||'Save failed', 'err'); }
+  });
+}
+
+/* ============================================================================
+   VIEW: CALENDAR (tasks, project deadlines, lead close dates, meetings)
+============================================================================ */
+let calendarCursor = new Date();
+async function renderCalendar(root){
+  const [tasks, projects, leads, meetings, { map: clientMap }] = await Promise.all([
+    dbList('tasks'), dbList('projects'), dbList('leads'), dbList('meetings'), getClientMap()
+  ]);
+  if (!calendarCursor) calendarCursor = new Date();
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button id="cal-prev" class="btn-ghost w-9 h-9 flex items-center justify-center p-0"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+          <h3 id="cal-label" class="font-heading font-bold text-lg w-44 text-center"></h3>
+          <button id="cal-next" class="btn-ghost w-9 h-9 flex items-center justify-center p-0"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+        </div>
+        <button id="add-meeting-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Meeting</button>
+      </div>
+      <div class="premium-card p-4">
+        <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-slate-400 mb-2">
+          ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div>${d}</div>`).join('')}
+        </div>
+        <div class="grid grid-cols-7 gap-1" id="cal-grid"></div>
+      </div>
+      <div class="premium-card p-4">
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-3">Upcoming Meetings</h3>
+        <div id="meetings-list" class="space-y-2"></div>
+      </div>
+    </div>`;
+
+  function eventsForDay(dateStr){
+    const events = [];
+    tasks.forEach(t => { if (t.due_date === dateStr) events.push({ type:'Task', label:t.title, color:'bg-ascendBlue' }); });
+    projects.forEach(p => { if (p.deadline === dateStr) events.push({ type:'Project', label:p.name, color:'bg-orange-500' }); });
+    leads.forEach(l => { if (l.close_date === dateStr) events.push({ type:'Deal', label:l.company, color:'bg-ascendGreen' }); });
+    meetings.forEach(m => { if (m.date === dateStr) events.push({ type:'Meeting', label:m.title, color:'bg-indigo-500' }); });
+    return events;
+  }
+  function draw(){
+    const year = calendarCursor.getFullYear(), month = calendarCursor.getMonth();
+    $('#cal-label').textContent = calendarCursor.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+    const firstDay = new Date(year, month, 1);
+    const startOffset = firstDay.getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const todayStr = new Date().toISOString().slice(0,10);
+    let cells = '';
+    for (let i=0; i<startOffset; i++) cells += `<div class="h-24 rounded-lg"></div>`;
+    for (let d=1; d<=daysInMonth; d++){
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const events = eventsForDay(dateStr);
+      const isToday = dateStr === todayStr;
+      cells += `<div class="h-24 rounded-lg border p-1.5 overflow-hidden cal-day" data-date="${dateStr}" style="border-color:var(--border-light); ${isToday?'background:rgba(14,79,115,.06)':''}">
+        <span class="text-[10px] font-bold ${isToday?'text-ascendBlue':'text-slate-400'}">${d}</span>
+        <div class="space-y-0.5 mt-0.5">
+          ${events.slice(0,3).map(e=>`<div class="text-[9px] text-white px-1 py-0.5 rounded truncate ${e.color}">${esc(e.label)}</div>`).join('')}
+          ${events.length>3?`<div class="text-[9px] text-slate-400">+${events.length-3} more</div>`:''}
+        </div>
+      </div>`;
+    }
+    $('#cal-grid').innerHTML = cells;
+    $$('.cal-day').forEach(cell => cell.addEventListener('click', () => {
+      const events = eventsForDay(cell.dataset.date);
+      if (!events.length) return;
+      openDetailModal(fmtDate(cell.dataset.date), `<div class="space-y-2">${events.map(e=>`<div class="premium-card p-3 flex items-center gap-3"><span class="text-[9px] font-bold uppercase px-2 py-1 rounded-md text-white ${e.color}">${e.type}</span><span class="text-sm font-semibold">${esc(e.label)}</span></div>`).join('')}</div>`);
+    }));
+
+    const upcoming = meetings.filter(m => m.status==='Scheduled' && new Date(m.date) >= new Date(todayStr)).sort((a,b)=>new Date(a.date)-new Date(b.date));
+    $('#meetings-list').innerHTML = upcoming.map(m => `
+      <div class="flex items-center justify-between py-2 border-b last:border-0" style="border-color:var(--border-light)">
+        <div><p class="font-semibold text-sm">${esc(m.title)}</p><p class="text-xs text-slate-400">${esc(clientMap[m.client_id]?.name||'Internal')} · ${esc(m.attendees||'')}</p></div>
+        <div class="text-right"><p class="text-xs font-bold">${fmtDate(m.date)}</p><p class="text-xs text-slate-400">${esc(m.time)}</p></div>
+      </div>`).join('') || '<p class="text-sm text-slate-400">No upcoming meetings.</p>';
+    lucide.createIcons();
+  }
+  $('#cal-prev').addEventListener('click', () => { calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth()-1, 1); draw(); });
+  $('#cal-next').addEventListener('click', () => { calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth()+1, 1); draw(); });
+  $('#add-meeting-btn').addEventListener('click', () => openMeetingForm(clientMap));
+  draw();
+}
+function openMeetingForm(clientMap){
+  openModal('Add Meeting', `
+    <form id="meeting-form" class="space-y-4">
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Title</label><input required id="f-title" class="input-field"></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Client</label><select id="f-client" class="input-field"><option value="">— Internal —</option>${Object.values(clientMap).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Date</label><input required type="date" id="f-date" class="input-field" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Time</label><input type="time" id="f-time" class="input-field" value="09:00"></div>
+      </div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Attendees</label><input id="f-attendees" class="input-field" placeholder="Comma-separated names"></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Notes</label><textarea id="f-notes" rows="2" class="input-field"></textarea></div>
+      <div class="flex justify-end gap-3 pt-3 border-t" style="border-color:var(--border-light)"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save Meeting</button></div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  $('#meeting-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const patch = { title:$('#f-title').value.trim(), client_id:$('#f-client').value||null, date:$('#f-date').value, time:$('#f-time').value,
+      attendees:$('#f-attendees').value.trim(), notes:$('#f-notes').value.trim(), status:'Scheduled' };
+    try { await dbInsert('meetings', { ...patch, created_by: currentUser.id }); toast('Meeting scheduled.'); closeModal(); renderView('calendar'); }
+    catch(err){ toast(err.message||'Save failed', 'err'); }
+  });
+}
+
+/* ============================================================================
+   VIEW: ASCEND MEDIA (content calendar & analytics — CEO/ADMIN)
+============================================================================ */
+const CONTENT_STAGES = ['Planned','Filmed','Edited','Approved','Published'];
+async function renderMedia(root){
+  const canEdit = currentUser.role === 'ADMIN';
+  const [items, { map }] = await Promise.all([dbList('content_items'), getClientMap()]);
+  const totals = items.reduce((acc,i) => {
+    acc.reach += Number(i.reach||0); acc.impressions += Number(i.impressions||0); acc.views += Number(i.views||0);
+    acc.engagement += Number(i.likes||0)+Number(i.comments||0)+Number(i.shares||0)+Number(i.saves||0);
+    acc.leads += Number(i.leads_generated||0); acc.revenue += Number(i.revenue_generated||0);
+    return acc;
+  }, { reach:0, impressions:0, views:0, engagement:0, leads:0, revenue:0 });
+
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        ${kpi('Reach', totals.reach.toLocaleString(), 'eye')}
+        ${kpi('Impressions', totals.impressions.toLocaleString(), 'scan-eye')}
+        ${kpi('Views', totals.views.toLocaleString(), 'play')}
+        ${kpi('Engagement', totals.engagement.toLocaleString(), 'heart')}
+        ${kpi('Leads Generated', totals.leads.toLocaleString(), 'users')}
+        ${kpi('Revenue Generated', fmtMoney(totals.revenue), 'dollar-sign')}
+      </div>
+      <div class="flex items-center justify-between">
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-slate-400">Content Calendar — ${items.length} Items</h3>
+        ${canEdit ? '<button id="add-content-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Content</button>' : ''}
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3" id="media-board">
+        ${CONTENT_STAGES.map(stage => `
+          <div class="kanban-col premium-card p-3" data-stage="${stage}">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${stage}</span>
+              <span class="text-[10px] font-bold bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded">${items.filter(i=>i.status===stage).length}</span>
+            </div>
+            <div class="space-y-2 content-list" data-stage="${stage}"></div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  function draw(){
+    CONTENT_STAGES.forEach(stage => {
+      const col = $(`.content-list[data-stage="${stage}"]`);
+      const colItems = items.filter(i => i.status === stage);
+      col.innerHTML = colItems.map(i => `
+        <div class="lead-card premium-card p-3 cursor-pointer" ${canEdit?'draggable="true"':''} data-id="${i.id}">
+          <p class="font-semibold text-xs">${esc(i.title)}</p>
+          <p class="text-[11px] text-slate-400">${esc(map[i.client_id]?.name||'Internal')} · ${esc(i.platform||i.content_type)}</p>
+          ${i.scheduled_date ? `<span class="text-[10px] text-slate-400">Scheduled ${fmtDate(i.scheduled_date)}</span>` : ''}
+        </div>`).join('');
+    });
+    $$('#media-board .lead-card').forEach(card => {
+      card.addEventListener('click', () => { if (canEdit) openContentForm(items.find(i=>i.id===card.dataset.id), map); });
+      if (canEdit){
+        card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.dataset.id); card.classList.add('dragging'); });
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+      }
+    });
+    if (canEdit){
+      $$('.content-list').forEach(col => {
+        col.addEventListener('dragover', (e) => e.preventDefault());
+        col.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData('text/plain');
+          await dbUpdate('content_items', id, { status: col.dataset.stage });
+          toast('Content moved to ' + col.dataset.stage); renderView('media');
+        });
+      });
+    }
+  }
+  draw();
+  if (canEdit) $('#add-content-btn').addEventListener('click', () => openContentForm(null, map));
+}
+function openContentForm(item, clientMap){
+  const i = item || { title:'', client_id:'', content_type:'Video', platform:'', status:'Planned', scheduled_date:'', reach:0, impressions:0, views:0, likes:0, comments:0, shares:0, saves:0, followers_gained:0, website_clicks:0, leads_generated:0, revenue_generated:0 };
+  const clientOptions = Object.values(clientMap).map(c=>`<option value="${c.id}" ${i.client_id===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+  openModal(item ? 'Edit Content' : 'Add Content', `
+    <form id="content-form" class="space-y-4">
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Title</label><input required id="f-title" class="input-field" value="${esc(i.title)}"></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Client</label><select id="f-client" class="input-field"><option value="">— Internal —</option>${clientOptions}</select></div>
+      <div class="grid grid-cols-3 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Type</label>
+          <select id="f-type" class="input-field">${['Video','Post','Article','Graphic','Email','Other'].map(t=>`<option ${i.content_type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Platform</label><input id="f-platform" class="input-field" value="${esc(i.platform||'')}" placeholder="Instagram, TikTok…"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label>
+          <select id="f-status" class="input-field">${CONTENT_STAGES.map(s=>`<option ${i.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Scheduled Date</label><input type="date" id="f-date" class="input-field" value="${i.scheduled_date||''}"></div>
+      <div class="pt-3 border-t" style="border-color:var(--border-light)">
+        <p class="text-[11px] font-bold uppercase text-slate-400 mb-2">Analytics (fill in once live)</p>
+        <div class="grid grid-cols-3 gap-3 mb-3">
+          <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Reach</label><input type="number" id="f-reach" class="input-field" value="${i.reach||0}"></div>
+          <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Impressions</label><input type="number" id="f-impressions" class="input-field" value="${i.impressions||0}"></div>
+          <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Views</label><input type="number" id="f-views" class="input-field" value="${i.views||0}"></div>
+        </div>
+        <div class="grid grid-cols-4 gap-3 mb-3">
+          <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Likes</label><input type="number" id="f-likes" class="input-field" value="${i.likes||0}"></div>
+          <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Comments</label><input type="number" id="f-comments" class="input-field" value="${i.comments||0}"></div>
+          <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Shares</label><input type="number" id="f-shares" class="input-field" value="${i.shares||0}"></div>
+          <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Saves</label><input type="number" id="f-saves" class="input-field" value="${i.saves||0}"></div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Website Clicks</label><input type="number" id="f-clicks" class="input-field" value="${i.website_clicks||0}"></div>
+          <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Leads Generated</label><input type="number" id="f-leadsgen" class="input-field" value="${i.leads_generated||0}"></div>
+          <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Revenue (R)</label><input type="number" id="f-revenue" class="input-field" value="${i.revenue_generated||0}"></div>
+        </div>
+      </div>
+      <div class="flex justify-between items-center pt-3 border-t" style="border-color:var(--border-light)">
+        ${item ? '<button type="button" id="del-content-btn" class="btn-danger">Delete</button>' : '<span></span>'}
+        <div class="flex gap-3"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save Content</button></div>
+      </div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  if (item) $('#del-content-btn').addEventListener('click', async () => {
+    if (!confirm('Delete this content item?')) return;
+    await dbDelete('content_items', item.id); toast('Content deleted.'); closeModal(); renderView('media');
+  });
+  $('#content-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const patch = { title:$('#f-title').value.trim(), client_id:$('#f-client').value||null, content_type:$('#f-type').value, platform:$('#f-platform').value.trim(),
+      status:$('#f-status').value, scheduled_date:$('#f-date').value||null, reach:Number($('#f-reach').value||0), impressions:Number($('#f-impressions').value||0),
+      views:Number($('#f-views').value||0), likes:Number($('#f-likes').value||0), comments:Number($('#f-comments').value||0), shares:Number($('#f-shares').value||0),
+      saves:Number($('#f-saves').value||0), website_clicks:Number($('#f-clicks').value||0), leads_generated:Number($('#f-leadsgen').value||0), revenue_generated:Number($('#f-revenue').value||0) };
+    try {
+      if (item) await dbUpdate('content_items', item.id, patch);
+      else await dbInsert('content_items', { ...patch, created_by: currentUser.id });
+      toast('Content saved.'); closeModal(); renderView('media');
+    } catch(err){ toast(err.message||'Save failed', 'err'); }
+  });
+}
+
+/* ============================================================================
+   VIEW: ASCEND SYSTEMS (automations + SOPs — CEO/ADMIN)
+============================================================================ */
+let systemsTab = 'automations';
+async function renderSystems(root){
+  const canEdit = currentUser.role === 'ADMIN';
+  const [automations, sops, { map }, profiles] = await Promise.all([dbList('automations'), dbList('sops'), getClientMap(), dbList('profiles')]);
+  const profileMap = {}; profiles.forEach(p => profileMap[p.id] = p);
+  const totalHoursSaved = automations.reduce((s,a)=>s+Number(a.hours_saved||0),0);
+  const activeCount = automations.filter(a=>a.status==='Active').length;
+  const avgSuccess = automations.length ? (automations.reduce((s,a)=>s+Number(a.success_rate||0),0)/automations.length) : 0;
+
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        ${kpi('Active Automations', activeCount, 'workflow')}
+        ${kpi('Hours Saved', totalHoursSaved.toLocaleString(), 'clock')}
+        ${kpi('Avg Success Rate', avgSuccess.toFixed(1)+'%', 'target')}
+        ${kpi('SOPs on File', sops.length, 'file-text')}
+      </div>
+      <div class="flex items-center gap-2 border-b" style="border-color:var(--border-light)">
+        <button id="tab-automations" class="custom-tab-btn px-4 py-2 text-xs font-bold uppercase">Automations</button>
+        <button id="tab-sops" class="custom-tab-btn px-4 py-2 text-xs font-bold uppercase">SOPs</button>
+      </div>
+      <div id="systems-tab-body"></div>
+    </div>`;
+
+  function drawAutomations(){
+    $('#systems-tab-body').innerHTML = `
+      <div class="flex justify-end mb-3">${canEdit ? '<button id="add-auto-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Automation</button>' : ''}</div>
+      <div class="premium-card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
+            <th class="py-3 px-4">Name</th><th>Client</th><th>Status</th><th>Success Rate</th><th>Hours Saved</th><th>Tasks Automated</th><th>Failed Runs</th><th></th></tr></thead>
+          <tbody>${automations.map(a => `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
+            <td class="py-3 px-4 font-semibold">${esc(a.name)}</td><td class="text-slate-400">${esc(map[a.client_id]?.name||'Internal')}</td><td>${statusPill(a.status)}</td>
+            <td class="font-bold">${Number(a.success_rate||0).toFixed(1)}%</td><td>${a.hours_saved}</td><td>${a.tasks_automated}</td><td class="text-ascendRed">${a.failed_runs}</td>
+            <td class="text-right px-4">${canEdit?`<button data-id="${a.id}" class="del-auto-btn btn-danger"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`:''}</td>
+          </tr>`).join('') || `<tr><td colspan="8" class="p-6 text-center text-slate-400">No automations yet.</td></tr>`}</tbody>
+        </table>
+      </div>`;
+    lucide.createIcons();
+    if (canEdit){
+      $('#add-auto-btn').addEventListener('click', () => openAutomationForm(map));
+      $$('.del-auto-btn').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Delete this automation?')) return;
+        await dbDelete('automations', b.dataset.id); toast('Automation deleted.'); renderView('systems');
+      }));
+    }
+  }
+  function drawSops(){
+    $('#systems-tab-body').innerHTML = `
+      <div class="flex justify-end mb-3">${canEdit ? '<button id="add-sop-btn" class="btn-primary flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add SOP</button>' : ''}</div>
+      <div class="premium-card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
+            <th class="py-3 px-4">Title</th><th>Department</th><th>Owner</th><th>Version</th><th>Status</th><th>Approval</th><th>Review</th><th>Downloads</th><th></th></tr></thead>
+          <tbody>${sops.map(s => `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
+            <td class="py-3 px-4 font-semibold">${esc(s.title)}</td><td class="text-slate-400">${esc(s.department)}</td><td class="text-slate-400">${esc(profileMap[s.owner]?.full_name||'—')}</td>
+            <td>${esc(s.version)}</td><td>${statusPill(s.status)}</td><td class="text-slate-400">${fmtDate(s.approval_date)}</td><td class="text-slate-400">${fmtDate(s.review_date)}</td><td>${s.downloads}</td>
+            <td class="text-right px-4">${canEdit?`<button data-id="${s.id}" class="del-sop-btn btn-danger"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`:''}</td>
+          </tr>`).join('') || `<tr><td colspan="9" class="p-6 text-center text-slate-400">No SOPs yet.</td></tr>`}</tbody>
+        </table>
+      </div>`;
+    lucide.createIcons();
+    if (canEdit){
+      $('#add-sop-btn').addEventListener('click', () => openSopForm(profiles));
+      $$('.del-sop-btn').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Delete this SOP?')) return;
+        await dbDelete('sops', b.dataset.id); toast('SOP deleted.'); renderView('systems');
+      }));
+    }
+  }
+  function setTab(tab){
+    systemsTab = tab;
+    $('#tab-automations').classList.toggle('active', tab==='automations');
+    $('#tab-sops').classList.toggle('active', tab==='sops');
+    if (tab==='automations') drawAutomations(); else drawSops();
+  }
+  $('#tab-automations').addEventListener('click', () => setTab('automations'));
+  $('#tab-sops').addEventListener('click', () => setTab('sops'));
+  setTab(systemsTab);
+}
+function openAutomationForm(clientMap){
+  const clientOptions = Object.values(clientMap).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  openModal('Add Automation', `
+    <form id="auto-form" class="space-y-4">
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Name</label><input required id="f-name" class="input-field"></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Client</label><select id="f-client" class="input-field"><option value="">— Internal —</option>${clientOptions}</select></div>
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Description</label><textarea id="f-desc" rows="2" class="input-field"></textarea></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label>
+          <select id="f-status" class="input-field"><option>Active</option><option>Inactive</option><option>Draft</option></select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Success Rate (%)</label><input type="number" step="0.1" id="f-success" class="input-field" value="100"></div>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Hours Saved</label><input type="number" id="f-hours" class="input-field" value="0"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Tasks Automated</label><input type="number" id="f-tasks" class="input-field" value="0"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Failed Runs</label><input type="number" id="f-failed" class="input-field" value="0"></div>
+      </div>
+      <div class="flex justify-end gap-3 pt-3 border-t" style="border-color:var(--border-light)"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save Automation</button></div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  $('#auto-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const patch = { name:$('#f-name').value.trim(), client_id:$('#f-client').value||null, description:$('#f-desc').value.trim(), status:$('#f-status').value,
+      success_rate:Number($('#f-success').value||0), hours_saved:Number($('#f-hours').value||0), tasks_automated:Number($('#f-tasks').value||0), failed_runs:Number($('#f-failed').value||0) };
+    try { await dbInsert('automations', { ...patch, created_by: currentUser.id }); toast('Automation saved.'); closeModal(); renderView('systems'); }
+    catch(err){ toast(err.message||'Save failed', 'err'); }
+  });
+}
+function openSopForm(profiles){
+  const ownerOptions = profiles.filter(p=>['ADMIN','CEO','STAFF'].includes(p.role)).map(p=>`<option value="${p.id}">${esc(p.full_name)}</option>`).join('');
+  openModal('Add SOP', `
+    <form id="sop-form" class="space-y-4">
+      <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Title</label><input required id="f-title" class="input-field"></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Department</label>
+          <select id="f-dept" class="input-field">${['Ascend Media','Ascend Systems','Ascend Software','Company-Wide'].map(d=>`<option>${d}</option>`).join('')}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Owner</label><select id="f-owner" class="input-field"><option value="">— Unassigned —</option>${ownerOptions}</select></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Version</label><input id="f-version" class="input-field" value="v1.0"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Status</label>
+          <select id="f-status" class="input-field">${['Draft','In Review','Approved','Archived'].map(s=>`<option>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Approval Date</label><input type="date" id="f-approval" class="input-field"></div>
+        <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Review Date</label><input type="date" id="f-review" class="input-field"></div>
+      </div>
+      <div class="flex justify-end gap-3 pt-3 border-t" style="border-color:var(--border-light)"><button type="button" id="cancel-btn" class="btn-ghost">Cancel</button><button type="submit" class="btn-primary">Save SOP</button></div>
+    </form>`);
+  $('#cancel-btn').addEventListener('click', closeModal);
+  $('#sop-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const patch = { title:$('#f-title').value.trim(), department:$('#f-dept').value, owner:$('#f-owner').value||null, version:$('#f-version').value.trim(),
+      status:$('#f-status').value, approval_date:$('#f-approval').value||null, review_date:$('#f-review').value||null };
+    try { await dbInsert('sops', patch); toast('SOP saved.'); closeModal(); renderView('systems'); }
+    catch(err){ toast(err.message||'Save failed', 'err'); }
+  });
+}
+
+/* ============================================================================
+   VIEW: ASCEND SOFTWARE (dedicated project analytics — CEO/ADMIN)
+============================================================================ */
+async function renderSoftware(root){
+  const canEdit = currentUser.role === 'ADMIN';
+  const [allProjects, { map }] = await Promise.all([dbList('projects'), getClientMap()]);
+  const projects = allProjects.filter(p => p.division === 'Ascend Software' || p.division === 'All Divisions');
+  const totalUsers = projects.reduce((s,p)=>s+Number(p.users_count||0),0);
+  const totalSessions = projects.reduce((s,p)=>s+Number(p.sessions||0),0);
+  const avgUptime = projects.length ? (projects.reduce((s,p)=>s+Number(p.uptime||0),0)/projects.length) : 0;
+  const openBugs = projects.reduce((s,p)=>s+Number(p.bugs_open||0),0);
+
+  root.innerHTML = `
+    <div class="view-fade-in space-y-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        ${kpi('Total Users', totalUsers.toLocaleString(), 'users')}
+        ${kpi('Total Sessions', totalSessions.toLocaleString(), 'activity')}
+        ${kpi('Avg Uptime', avgUptime.toFixed(2)+'%', 'server')}
+        ${kpi('Open Bugs', openBugs, 'bug')}
+      </div>
+      <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-slate-400">${projects.length} Software Projects</h3>
+      <div class="premium-card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
+            <th class="py-3 px-4">Project</th><th>Client</th><th>Status</th><th>Users</th><th>Sessions</th><th>Conversion</th><th>Uptime</th><th>Bugs</th><th></th></tr></thead>
+          <tbody>${projects.map(p => `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
+            <td class="py-3 px-4 font-semibold">${esc(p.name)}</td><td class="text-slate-400">${esc(map[p.client_id]?.name||'Internal')}</td><td>${statusPill(p.status)}</td>
+            <td>${Number(p.users_count||0).toLocaleString()}</td><td>${Number(p.sessions||0).toLocaleString()}</td><td>${Number(p.conversion_rate||0).toFixed(1)}%</td>
+            <td>${Number(p.uptime||0).toFixed(2)}%</td><td class="${p.bugs_open>0?'text-ascendRed':''}">${p.bugs_open||0}</td>
+            <td class="text-right px-4">${canEdit?`<button data-id="${p.id}" class="edit-sw-btn text-ascendBlue"><i data-lucide="pencil" class="w-4 h-4"></i></button>`:''}</td>
+          </tr>`).join('') || `<tr><td colspan="9" class="p-6 text-center text-slate-400">No Ascend Software projects yet.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`;
+  if (canEdit) $$('.edit-sw-btn').forEach(b => b.addEventListener('click', () => openProjectForm(projects.find(p=>p.id===b.dataset.id), map)));
 }
 
 /* ============================================================================
@@ -1233,7 +2340,8 @@ function openDepositForm(projects, clientMap){
    VIEW: TEAM & ACCESS (user management — CEO & ADMIN)
 ============================================================================ */
 async function renderTeam(root){
-  const [profiles, { clients, map }] = await Promise.all([dbList('profiles'), getClientMap()]);
+  const [profiles, { clients, map }, tasks] = await Promise.all([dbList('profiles'), getClientMap(), dbList('tasks')]);
+  const staffProfiles = profiles.filter(p => ['ADMIN','CEO','STAFF'].includes(p.role));
   root.innerHTML = `
     <div class="view-fade-in space-y-4">
       ${usingSupabase ? `<div class="premium-card p-4 text-xs text-slate-400 flex items-start gap-2"><i data-lucide="info" class="w-4 h-4 flex-shrink-0 mt-0.5 text-ascendBlue"></i>
@@ -1257,6 +2365,28 @@ async function renderTeam(root){
             </tr>`).join('')}
           </tbody>
         </table>
+      </div>
+
+      <div class="premium-card p-5">
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Team Performance</h3>
+        <p class="text-xs text-slate-400 mb-4">Task-based productivity — assigned, completed, and overdue counts. There's no time-tracking yet, so "hours worked" isn't shown here.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)">
+              <th class="py-2">Team Member</th><th>Assigned</th><th>Completed</th><th>Overdue</th><th>Completion Rate</th></tr></thead>
+            <tbody>${staffProfiles.map(p => {
+              const mine = tasks.filter(t=>t.assigned_to===p.id);
+              const completed = mine.filter(t=>t.status==='DONE').length;
+              const overdue = mine.filter(t=>t.status!=='DONE' && t.due_date && new Date(t.due_date) < new Date()).length;
+              const rate = mine.length ? Math.round((completed/mine.length)*100) : 0;
+              return `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
+                <td class="py-2 font-semibold">${esc(p.full_name)} <span class="role-badge badge-${p.role} ml-1">${p.role}</span></td>
+                <td>${mine.length}</td><td class="text-ascendGreen font-bold">${completed}</td><td class="${overdue>0?'text-ascendRed font-bold':''}">${overdue}</td>
+                <td><div class="flex items-center gap-2"><div class="progress-track w-24"><div class="progress-fill" style="width:${rate}%"></div></div><span class="text-xs font-bold">${rate}%</span></div></td>
+              </tr>`;
+            }).join('') || `<tr><td colspan="5" class="p-4 text-center text-slate-400">No team members yet.</td></tr>`}</tbody>
+          </table>
+        </div>
       </div>
     </div>`;
 
@@ -1304,6 +2434,215 @@ function openUserForm(clients){
       toast('User created.'); closeModal(); renderView('team');
     } catch(err){ toast(err.message||'Could not create user', 'err'); btn.disabled = false; btn.textContent = 'Create User'; }
   });
+}
+
+/* ============================================================================
+   EXPORT HELPERS (CSV / Excel)
+============================================================================ */
+function exportToCSV(filename, rows, columns){
+  const esc2 = (v) => `"${String(v??'').replace(/"/g,'""')}"`;
+  const header = columns.map(c=>esc2(c.label)).join(',');
+  const lines = rows.map(r => columns.map(c=>esc2(r[c.key])).join(','));
+  const csv = [header, ...lines].join('\n');
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+function exportToXLSX(filename, sheetName, rows, columns){
+  const data = rows.map(r => { const o={}; columns.forEach(c=>o[c.label]=r[c.key]); return o; });
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, filename);
+}
+
+/* ============================================================================
+   VIEW: REPORTS (report generator hub — CEO & ADMIN)
+============================================================================ */
+const REPORT_TYPES = [
+  { kind:'Weekly', desc:'Last 7 days of revenue, expenses, and new leads.', icon:'calendar-days' },
+  { kind:'Monthly', desc:'Last 30 days of revenue, expenses, and new leads.', icon:'calendar-days' },
+  { kind:'Quarterly', desc:'Last 90 days of revenue, expenses, and new leads.', icon:'calendar-range' },
+  { kind:'Annual', desc:'Last 365 days of revenue, expenses, and new leads.', icon:'calendar-range' },
+  { kind:'Media', desc:'Ascend Media content performance and totals.', icon:'video' },
+  { kind:'Systems', desc:'Automations and SOPs on file.', icon:'workflow' },
+  { kind:'Software', desc:'Ascend Software project analytics.', icon:'code-2' },
+  { kind:'Financial', desc:'Full finance ledger and totals.', icon:'credit-card' },
+  { kind:'Growth', desc:'Pipeline funnel and client lifecycle breakdown.', icon:'trending-up' },
+  { kind:'Executive', desc:'One-page KPI snapshot for leadership.', icon:'briefcase' },
+];
+async function renderReports(root){
+  root.innerHTML = `
+    <div class="view-fade-in space-y-6">
+      <div>
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-slate-400 mb-1">Generate a Report</h3>
+        <p class="text-xs text-slate-400">Each report downloads as a PDF built from your live data.</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        ${REPORT_TYPES.map(r => `
+          <div class="premium-card p-5">
+            <div class="flex items-center gap-2 mb-2"><i data-lucide="${r.icon}" class="w-4 h-4 text-ascendBlue"></i><h4 class="font-heading font-bold text-sm">${r.kind} Report</h4></div>
+            <p class="text-xs text-slate-400 mb-4">${r.desc}</p>
+            <button data-kind="${r.kind}" class="gen-module-report-btn btn-ghost w-full flex items-center justify-center gap-1.5"><i data-lucide="download" class="w-3.5 h-3.5"></i>Download PDF</button>
+          </div>`).join('')}
+      </div>
+
+      <div>
+        <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-slate-400 mb-1">Export Raw Data</h3>
+        <p class="text-xs text-slate-400">Export any module as a spreadsheet.</p>
+      </div>
+      <div class="premium-card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:var(--border-light)"><th class="py-3 px-4">Module</th><th></th></tr></thead>
+          <tbody>
+            ${['Clients','Leads','Projects','Finance','Tasks'].map(m => `<tr class="border-b last:border-0" style="border-color:var(--border-light)">
+              <td class="py-3 px-4 font-semibold">${m}</td>
+              <td class="text-right px-4"><div class="inline-flex gap-2">
+                <button data-module="${m}" class="export-csv-btn btn-ghost">CSV</button>
+                <button data-module="${m}" class="export-xlsx-btn btn-ghost">Excel</button>
+              </div></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+
+  $$('.gen-module-report-btn').forEach(b => b.addEventListener('click', () => generateModuleReportPDF(b.dataset.kind)));
+  $$('.export-csv-btn').forEach(b => b.addEventListener('click', () => exportModule(b.dataset.module, 'csv')));
+  $$('.export-xlsx-btn').forEach(b => b.addEventListener('click', () => exportModule(b.dataset.module, 'xlsx')));
+}
+
+async function exportModule(moduleName, format){
+  const stamp = new Date().toISOString().slice(0,10);
+  let rows, columns, table, sheet;
+  if (moduleName === 'Clients'){
+    rows = await dbList('clients'); table = 'clients'; sheet = 'Clients';
+    columns = [{key:'name',label:'Business Name'},{key:'industry',label:'Industry'},{key:'status',label:'Status'},{key:'lifecycle_stage',label:'Lifecycle'},{key:'contract_value',label:'Contract Value'},{key:'renewal_date',label:'Renewal Date'},{key:'contact_name',label:'Contact'},{key:'email',label:'Email'},{key:'phone',label:'Phone'}];
+  } else if (moduleName === 'Leads'){
+    rows = await dbList('leads'); columns = [{key:'company',label:'Company'},{key:'contact_name',label:'Contact'},{key:'status',label:'Stage'},{key:'value',label:'Value'},{key:'probability',label:'Probability'},{key:'source',label:'Source'},{key:'competitor',label:'Competitor'},{key:'close_date',label:'Close Date'}];
+    sheet = 'Leads';
+  } else if (moduleName === 'Projects'){
+    const projects = await dbList('projects'); const { map } = await getClientMap();
+    rows = projects.map(p => ({ ...p, client_name: map[p.client_id]?.name||'Internal' }));
+    columns = [{key:'name',label:'Project'},{key:'client_name',label:'Client'},{key:'division',label:'Division'},{key:'status',label:'Status'},{key:'progress',label:'Progress %'},{key:'budget',label:'Budget'},{key:'deadline',label:'Deadline'}];
+    sheet = 'Projects';
+  } else if (moduleName === 'Finance'){
+    const finance = await dbList('finance'); const { map } = await getClientMap();
+    rows = finance.map(f => ({ ...f, client_name: map[f.client_id]?.name||'—' }));
+    columns = [{key:'description',label:'Description'},{key:'client_name',label:'Client'},{key:'division',label:'Division'},{key:'type',label:'Type'},{key:'payment_type',label:'Payment Type'},{key:'amount',label:'Amount'},{key:'status',label:'Status'},{key:'date',label:'Date'}];
+    sheet = 'Finance';
+  } else {
+    const tasks = await dbList('tasks'); const { map } = await getClientMap();
+    rows = tasks.map(t => ({ ...t, client_name: map[t.client_id]?.name||'—' }));
+    columns = [{key:'title',label:'Task'},{key:'client_name',label:'Client'},{key:'status',label:'Status'},{key:'priority',label:'Priority'},{key:'due_date',label:'Due Date'},{key:'recurring',label:'Recurring'}];
+    sheet = 'Tasks';
+  }
+  if (format === 'csv') exportToCSV(`AscendFlow-${moduleName}-${stamp}.csv`, rows, columns);
+  else exportToXLSX(`AscendFlow-${moduleName}-${stamp}.xlsx`, sheet, rows, columns);
+  toast(`${moduleName} exported.`);
+}
+
+async function generateModuleReportPDF(kind){
+  if (!['CEO','ADMIN'].includes(currentUser.role)){ toast('Reports are available to CEO and Admin accounts.', 'err'); return; }
+  toast('Generating ' + kind + ' report…');
+  try {
+    const [clients, leads, projects, finance, tasks, content, automations, sops] = await Promise.all([
+      dbList('clients'), dbList('leads'), dbList('projects'), dbList('finance'), dbList('tasks'),
+      dbList('content_items'), dbList('automations'), dbList('sops')
+    ]);
+    const clientMap = {}; clients.forEach(c => clientMap[c.id] = c);
+    const reportDate = new Date().toLocaleDateString('en-ZA', { month:'long', day:'numeric', year:'numeric' });
+    const now = new Date();
+    const withinDays = (dateStr, days) => { if (!dateStr) return false; const d = new Date(dateStr); return d <= now && (now - d)/86400000 <= days; };
+
+    let sections = [];
+    if (['Weekly','Monthly','Quarterly','Annual'].includes(kind)){
+      const days = { Weekly:7, Monthly:30, Quarterly:90, Annual:365 }[kind];
+      const periodFinance = finance.filter(f => withinDays(f.date, days));
+      const periodLeads = leads.filter(l => withinDays(l.created_at, days));
+      const rev = periodFinance.filter(f=>f.type==='REVENUE'&&f.status==='Paid').reduce((s,f)=>s+Number(f.amount||0),0);
+      const exp = periodFinance.filter(f=>f.type==='EXPENSE').reduce((s,f)=>s+Number(f.amount||0),0);
+      sections.push(`${reportHeader(kind+' Report', reportDate)}
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          ${kpi('Revenue ('+kind+')', fmtMoney(rev), 'trending-up')}
+          ${kpi('Expenses ('+kind+')', fmtMoney(exp), 'trending-down')}
+          ${kpi('New Leads ('+kind+')', periodLeads.length, 'users')}
+        </div>
+        <div class="premium-card p-5">
+          <h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Finance Activity</h3>
+          <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:#E2E8F0"><th class="py-2">Description</th><th>Type</th><th>Amount</th><th>Date</th></tr></thead>
+          <tbody>${periodFinance.map(f=>`<tr class="border-b" style="border-color:#E2E8F0"><td class="py-2 font-semibold">${esc(f.description)}</td><td>${f.type}</td><td class="font-bold">${fmtMoney(f.amount)}</td><td class="text-slate-400">${fmtDate(f.date)}</td></tr>`).join('') || '<tr><td colspan="4" class="p-4 text-center text-slate-400">No activity in this period.</td></tr>'}</tbody></table>
+        </div>`);
+      sections.push(`${reportHeader(kind+' Report — New Leads', reportDate)}
+        <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:#E2E8F0"><th class="py-2">Company</th><th>Stage</th><th>Value</th><th>Source</th><th>Created</th></tr></thead>
+        <tbody>${periodLeads.map(l=>`<tr class="border-b" style="border-color:#E2E8F0"><td class="py-2 font-semibold">${esc(l.company)}</td><td>${statusPill(l.status)}</td><td>${fmtMoney(l.value)}</td><td class="text-slate-400">${esc(l.source)}</td><td class="text-slate-400">${fmtDate(l.created_at)}</td></tr>`).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">No new leads in this period.</td></tr>'}</tbody></table>`);
+    } else if (kind === 'Media'){
+      const totals = content.reduce((a,i)=>({ reach:a.reach+Number(i.reach||0), leads:a.leads+Number(i.leads_generated||0), revenue:a.revenue+Number(i.revenue_generated||0) }), {reach:0,leads:0,revenue:0});
+      sections.push(`${reportHeader('Ascend Media Report', reportDate)}
+        <div class="grid grid-cols-3 gap-4 mb-6">${kpi('Total Reach', totals.reach.toLocaleString(), 'eye')}${kpi('Leads Generated', totals.leads, 'users')}${kpi('Revenue Generated', fmtMoney(totals.revenue), 'dollar-sign')}</div>
+        <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:#E2E8F0"><th class="py-2">Title</th><th>Client</th><th>Status</th><th>Reach</th><th>Leads</th><th>Revenue</th></tr></thead>
+        <tbody>${content.map(i=>`<tr class="border-b" style="border-color:#E2E8F0"><td class="py-2 font-semibold">${esc(i.title)}</td><td class="text-slate-400">${esc(clientMap[i.client_id]?.name||'Internal')}</td><td>${statusPill(i.status)}</td><td>${i.reach}</td><td>${i.leads_generated}</td><td class="font-bold">${fmtMoney(i.revenue_generated)}</td></tr>`).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-400">No content yet.</td></tr>'}</tbody></table>`);
+    } else if (kind === 'Systems'){
+      sections.push(`${reportHeader('Ascend Systems Report — Automations', reportDate)}
+        <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:#E2E8F0"><th class="py-2">Name</th><th>Client</th><th>Status</th><th>Success Rate</th><th>Hours Saved</th></tr></thead>
+        <tbody>${automations.map(a=>`<tr class="border-b" style="border-color:#E2E8F0"><td class="py-2 font-semibold">${esc(a.name)}</td><td class="text-slate-400">${esc(clientMap[a.client_id]?.name||'Internal')}</td><td>${statusPill(a.status)}</td><td>${Number(a.success_rate||0).toFixed(1)}%</td><td>${a.hours_saved}</td></tr>`).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">No automations yet.</td></tr>'}</tbody></table>`);
+      sections.push(`${reportHeader('Ascend Systems Report — SOPs', reportDate)}
+        <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:#E2E8F0"><th class="py-2">Title</th><th>Department</th><th>Version</th><th>Status</th></tr></thead>
+        <tbody>${sops.map(s=>`<tr class="border-b" style="border-color:#E2E8F0"><td class="py-2 font-semibold">${esc(s.title)}</td><td class="text-slate-400">${esc(s.department)}</td><td>${esc(s.version)}</td><td>${statusPill(s.status)}</td></tr>`).join('') || '<tr><td colspan="4" class="p-4 text-center text-slate-400">No SOPs yet.</td></tr>'}</tbody></table>`);
+    } else if (kind === 'Software'){
+      const swProjects = projects.filter(p=>p.division==='Ascend Software'||p.division==='All Divisions');
+      sections.push(`${reportHeader('Ascend Software Report', reportDate)}
+        <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:#E2E8F0"><th class="py-2">Project</th><th>Client</th><th>Status</th><th>Users</th><th>Uptime</th><th>Bugs</th></tr></thead>
+        <tbody>${swProjects.map(p=>`<tr class="border-b" style="border-color:#E2E8F0"><td class="py-2 font-semibold">${esc(p.name)}</td><td class="text-slate-400">${esc(clientMap[p.client_id]?.name||'Internal')}</td><td>${statusPill(p.status)}</td><td>${p.users_count}</td><td>${Number(p.uptime||0).toFixed(2)}%</td><td>${p.bugs_open}</td></tr>`).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-400">No software projects yet.</td></tr>'}</tbody></table>`);
+    } else if (kind === 'Financial'){
+      const rev = finance.filter(f=>f.type==='REVENUE'&&f.status==='Paid').reduce((s,f)=>s+Number(f.amount||0),0);
+      const exp = finance.filter(f=>f.type==='EXPENSE').reduce((s,f)=>s+Number(f.amount||0),0);
+      sections.push(`${reportHeader('Financial Report', reportDate)}
+        <div class="grid grid-cols-3 gap-4 mb-6">${kpi('Total Revenue', fmtMoney(rev), 'trending-up')}${kpi('Total Expenses', fmtMoney(exp), 'trending-down')}${kpi('Net Position', fmtMoney(rev-exp), 'wallet')}</div>
+        <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:#E2E8F0"><th class="py-2">Description</th><th>Client</th><th>Type</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>${finance.map(f=>`<tr class="border-b" style="border-color:#E2E8F0"><td class="py-2 font-semibold">${esc(f.description)}</td><td class="text-slate-400">${esc(clientMap[f.client_id]?.name||'—')}</td><td>${f.type}</td><td class="font-bold">${fmtMoney(f.amount)}</td><td>${statusPill(f.status)}</td><td class="text-slate-400">${fmtDate(f.date)}</td></tr>`).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-400">No finance records yet.</td></tr>'}</tbody></table>`);
+    } else if (kind === 'Growth'){
+      const funnel = LEAD_STAGES.map(st => ({ stage:st, count: leads.filter(l=>l.status===st).length }));
+      const lifecycle = LIFECYCLE_STAGES.map(st => ({ stage:st, count: clients.filter(c=>(c.lifecycle_stage||'Onboarding')===st).length }));
+      sections.push(`${reportHeader('Growth Report', reportDate)}
+        <div class="premium-card p-5 mb-6"><h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Pipeline Funnel</h3>
+        <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:#E2E8F0"><th class="py-2">Stage</th><th>Count</th></tr></thead>
+        <tbody>${funnel.map(f=>`<tr class="border-b" style="border-color:#E2E8F0"><td class="py-2 font-semibold">${f.stage}</td><td>${f.count}</td></tr>`).join('')}</tbody></table></div>
+        <div class="premium-card p-5"><h3 class="font-heading font-bold text-sm uppercase tracking-wider mb-4">Client Lifecycle</h3>
+        <table class="w-full text-sm"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b" style="border-color:#E2E8F0"><th class="py-2">Stage</th><th>Count</th></tr></thead>
+        <tbody>${lifecycle.map(f=>`<tr class="border-b" style="border-color:#E2E8F0"><td class="py-2 font-semibold">${f.stage}</td><td>${f.count}</td></tr>`).join('')}</tbody></table></div>`);
+    } else if (kind === 'Executive'){
+      const rev = finance.filter(f=>f.type==='REVENUE'&&f.status==='Paid').reduce((s,f)=>s+Number(f.amount||0),0);
+      const openLeadsVal = leads.filter(l=>!['Won','Lost'].includes(l.status)).reduce((s,l)=>s+Number(l.value||0),0);
+      sections.push(`${reportHeader('Executive Summary', reportDate)}
+        <div class="grid grid-cols-3 gap-4">
+          ${kpi('Total Revenue (Paid)', fmtMoney(rev), 'dollar-sign')}
+          ${kpi('Active Clients', clients.filter(c=>c.status==='ACTIVE').length, 'building-2')}
+          ${kpi('Open Pipeline Value', fmtMoney(openLeadsVal), 'users')}
+          ${kpi('Active Projects', projects.filter(p=>p.status==='ACTIVE').length, 'folder-kanban')}
+          ${kpi('Overdue Tasks', tasks.filter(t=>t.status!=='DONE'&&t.due_date&&new Date(t.due_date)<new Date()).length, 'alert-triangle')}
+          ${kpi('Team Size', 'See Team & Access', 'users')}
+        </div>`);
+    }
+
+    const pdf = new (window.jspdf.jsPDF)('p', 'pt', 'a4');
+    for (let i = 0; i < sections.length; i++){
+      const container = document.createElement('div');
+      container.style.cssText = "position:fixed;left:-99999px;top:0;width:1000px;padding:32px;background:#F8FAFC;color:#0F172A;font-family:'Plus Jakarta Sans',sans-serif;--bg-primary:#F8FAFC;--bg-secondary:#FFFFFF;--text-main:#0F172A;--text-muted:#64748B;--border-light:#E2E8F0;";
+      container.innerHTML = sections[i];
+      document.body.appendChild(container);
+      lucide.createIcons();
+      await new Promise(r => setTimeout(r, 30));
+      await addSectionToPdf(pdf, container, i === 0);
+      document.body.removeChild(container);
+    }
+    pdf.save(`AscendFlow-${kind}-Report-${new Date().toISOString().slice(0,10)}.pdf`);
+    toast(kind + ' report downloaded.');
+  } catch(e){
+    console.error(e);
+    toast('Could not generate the report.', 'err');
+  }
 }
 
 /* ============================================================================
@@ -1386,6 +2725,7 @@ async function renderClientPortal(root){
     dbList('finance', { client_id: currentUser.client_id })
   ]);
   const c = clientRow || {};
+  const clientHs = computeHealthScore(c, projects, finance);
   root.innerHTML = `
     <div class="view-fade-in space-y-6">
       <div class="premium-card p-6 flex items-center gap-4">
@@ -1396,7 +2736,7 @@ async function renderClientPortal(root){
         </div>
         <div class="text-right">
           <span class="text-[10px] font-bold uppercase text-slate-400 block">Health Score</span>
-          <span class="font-heading font-extrabold text-2xl ${healthColor(c.maturity_score||50)}">${c.maturity_score||50}</span>
+          <span class="font-heading font-extrabold text-2xl ${healthColor(clientHs)}">${clientHs} · ${healthLabel(clientHs)}</span>
         </div>
       </div>
 
@@ -1445,6 +2785,10 @@ function syncShellUI(){
   const roleBadge = $('#sidebar-user-role'); roleBadge.textContent = currentUser.role; roleBadge.className = 'role-badge badge-' + currentUser.role;
   const pill = $('#mode-pill'); pill.textContent = usingSupabase ? 'Supabase Connected' : 'Local Demo Mode';
   pill.className = 'text-[9px] font-bold uppercase px-2.5 py-1 rounded-full ' + (usingSupabase ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600');
+  const staffFacing = ['CEO','ADMIN','STAFF'].includes(currentUser.role);
+  $('#global-search-wrap').classList.toggle('hidden', !staffFacing);
+  $('#notif-wrap').classList.toggle('hidden', !staffFacing);
+  if (staffFacing) refreshNotifications();
 }
 
 function showApp(){
@@ -1470,6 +2814,9 @@ async function main(){
 
   if (currentUser) showApp(); else showAuth();
   lucide.createIcons();
+  wireGlobalSearch();
+  $('#notif-btn').addEventListener('click', () => { $('#notif-panel').classList.toggle('hidden'); refreshNotifications(); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#notif-wrap')) $('#notif-panel').classList.add('hidden'); });
 
   $('#login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
